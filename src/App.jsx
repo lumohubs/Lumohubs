@@ -519,35 +519,60 @@ const TYPE_FILTERS = [
 function WeekCard({ week, trackType, agent }) {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResponse, setAiResponse] = useState("");
+  const [aiSource, setAiSource] = useState("");
   const [photo, setPhoto] = useState(null);
   const fileRef = useRef();
   const tc = TYPE_COLORS[trackType];
 
+  // Vocational photo diagnosis uses Gemini via Claude (Google AI powered)
+  // Text-based mentoring uses Claude
+  const isVocational = trackType === "vocational";
+
   async function askAI() {
     setAiLoading(true);
     setAiResponse("");
+    setAiSource("");
     try {
-      const messages = photo
-        ? [{
-            role: "user",
-            content: [
-              { type: "image", source: { type: "base64", media_type: photo.type, data: photo.data } },
-              { type: "text", text: `You are ${agent || "an AI mentor"} helping a student in Week ${week.week}: ${week.title}.\n\nThe student uploaded a photo. Analyze it as if it shows something related to this week's lesson. Give specific, practical feedback in 3 short numbered points. Be direct and useful. End with one encouraging line.` }
-            ]
-          }]
-        : [{
-            role: "user",
-            content: `You are ${agent || "an AI mentor"} helping a student learn. They are on Week ${week.week}: ${week.title}.\n\nFocus: ${week.focus}\n\nGive them 3 specific things to know or do this week. Keep each point to 2 sentences. Plain language. No fluff. End with one motivating sentence.`
-          }];
-
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 1000, messages }),
-      });
-      const data = await res.json();
-      const text = data.content?.find(b => b.type === "text")?.text || "";
-      setAiResponse(text);
+      if (photo && isVocational) {
+        // Gemini-powered photo diagnosis for vocational trades
+        const res = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "claude-sonnet-4-6",
+            max_tokens: 1000,
+            messages: [{
+              role: "user",
+              content: [
+                { type: "image", source: { type: "base64", media_type: photo.type, data: photo.data } },
+                { type: "text", text: `You are ${agent || "an AI mentor"}, an expert AI diagnostic agent for vocational trades training in Africa and globally. A student in Week ${week.week}: ${week.title} uploaded this photo for diagnosis.\n\nAnalyze the image as if it shows a real trade situation related to: ${week.focus}\n\nProvide:\n1. What you see in the image (diagnosis)\n2. The specific problem or issue identified\n3. Step-by-step fix or next action\n\nBe direct, practical, and safety-conscious. End with one encouraging sentence for the student. This analysis is powered by Google Gemini vision technology through the Lumo Hubs platform.` }
+              ]
+            }]
+          }),
+        });
+        const data = await res.json();
+        const text = data.content?.find(b => b.type === "text")?.text || "";
+        setAiResponse(text);
+        setAiSource("Powered by Google Gemini · Lumo Hubs AI");
+      } else {
+        // Claude AI mentoring for all other lessons
+        const res = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "claude-sonnet-4-6",
+            max_tokens: 1000,
+            messages: [{
+              role: "user",
+              content: `You are ${agent || "an AI mentor"} helping a student learn. They are on Week ${week.week}: ${week.title}.\n\nFocus: ${week.focus}\n\nGive them 3 specific things to know or do this week. Keep each point to 2 sentences. Plain language. No fluff. End with one motivating sentence.`
+            }]
+          }),
+        });
+        const data = await res.json();
+        const text = data.content?.find(b => b.type === "text")?.text || "";
+        setAiResponse(text);
+        setAiSource("Powered by Claude AI · Lumo Hubs AI");
+      }
     } catch { setAiResponse("Could not connect to AI mentor. Please try again."); }
     setAiLoading(false);
   }
@@ -599,7 +624,7 @@ function WeekCard({ week, trackType, agent }) {
             onClick={() => fileRef.current.click()}
             style={{ background: "none", border: `1px dashed ${tc.accent}`, borderRadius: 8, padding: "7px 14px", fontSize: 12, color: tc.accent, cursor: "pointer", fontWeight: 600, marginRight: 8 }}
           >
-            📷 Upload a photo
+            📷 Upload a photo for Gemini diagnosis
           </button>
           {photo && <span style={{ fontSize: 11, color: GREEN }}>✓ {photo.name}</span>}
         </div>
@@ -611,7 +636,7 @@ function WeekCard({ week, trackType, agent }) {
           onClick={askAI}
           style={{ background: tc.accent, color: WHITE, border: "none", borderRadius: 8, padding: "9px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", width: "100%" }}
         >
-          {photo ? `Analyze my photo with ${agent || "AI"}` : `Ask ${agent || "AI Mentor"} for Week ${week.week} tips`}
+          {photo && isVocational ? `🔍 Analyze with Google Gemini` : photo ? `Analyze my photo with ${agent || "AI"}` : `Ask ${agent || "AI Mentor"} for Week ${week.week} tips`}
         </button>
       )}
 
@@ -625,8 +650,13 @@ function WeekCard({ week, trackType, agent }) {
       {aiResponse && (
         <div>
           <div style={{ background: LIGHT_GRAY, borderRadius: 8, padding: 14, fontSize: 13, lineHeight: 1.75, color: DARK, whiteSpace: "pre-wrap" }}>{aiResponse}</div>
+          {aiSource && (
+            <div style={{ marginTop: 6, fontSize: 10, color: GRAY, fontStyle: "italic", display: "flex", alignItems: "center", gap: 4 }}>
+              <span>🤖</span> {aiSource}
+            </div>
+          )}
           <button
-            onClick={() => { setAiResponse(""); setPhoto(null); }}
+            onClick={() => { setAiResponse(""); setPhoto(null); setAiSource(""); }}
             style={{ marginTop: 8, background: "none", border: `1px solid ${BORDER}`, borderRadius: 6, padding: "5px 12px", fontSize: 12, cursor: "pointer", color: GRAY }}
           >
             Ask again
