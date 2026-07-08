@@ -306,6 +306,25 @@ const TRACKS = [
       { week: 6, title: "Apprentice Certification Prep", focus: "Final project: fabricate and weld a structural metal assembly.", tools: ["Full toolkit", "WeldAI app", "AWS D1.1 code book"], ai: "AI inspects your coupon photos, grades them against AWS standards, and produces your cert report." },
     ]
   },
+  {
+    id: "healthcare",
+    name: "Healthcare & Medical Careers",
+    icon: "🏥",
+    type: "vocational",
+    agent: "MedAI",
+    tagline: "Diagnose it. Treat it. Save lives.",
+    description: "Learn healthcare from community health to clinical careers. Nursing prep, medical lab, radiology, pharmacy, and community health — with AI analyzing clinical photos, scans, and medical images to teach you what you are seeing and why it matters.",
+    demand: "Very High",
+    avgPay: "$20–$120/hr",
+    weeks: [
+      { week: 1, title: "Human Body & Clinical Foundations", focus: "Anatomy basics, vital signs, medical terminology, and how clinical settings work.", tools: ["Anatomy atlas app", "Stethoscope", "Blood pressure cuff", "MedAI app"], ai: "Photograph any anatomy diagram or clinical chart. AI explains every label, measurement, and what it means for patient care." },
+      { week: 2, title: "Nursing Skills & Patient Care", focus: "Nursing fundamentals: medication administration, wound care, IV basics, and patient assessment.", tools: ["Nursing skills checklist", "Wound care kit", "Gloves and PPE", "MedAI app"], ai: "Upload a photo of a wound or injection site. AI assesses condition, identifies signs of infection, and recommends the correct care protocol." },
+      { week: 3, title: "Radiology & Medical Imaging", focus: "Reading X-rays, CT scans, MRIs, and ultrasounds. Understanding what normal vs abnormal looks like.", tools: ["Radiology viewer app", "Sample scan library", "DICOM viewer", "MedAI app"], ai: "Upload any X-ray or scan image. AI walks you through what it sees, identifies key structures, and flags anything that warrants clinical attention." },
+      { week: 4, title: "Medical Lab & Diagnostics", focus: "Blood work, urinalysis, microbiology basics, and reading lab results accurately.", tools: ["Lab result reference guide", "Microscope basics", "Sample result sheets", "MedAI app"], ai: "Photograph a lab result or microscope slide. AI interprets the values, explains what is in or out of range, and tells you what the clinical significance is." },
+      { week: 5, title: "Pharmacy & Medication Management", focus: "Drug classes, dosage calculations, contraindications, and pharmacy operations.", tools: ["Drug reference app", "Dosage calculator", "Prescription pad samples", "MedAI app"], ai: "Upload a prescription or medication label. AI verifies the dosage, checks for contraindications, and explains the drug mechanism in plain language." },
+      { week: 6, title: "Certification & Career Prep", focus: "NCLEX prep for nurses, board exam basics for radiology and lab technicians, and building your clinical portfolio.", tools: ["NCLEX prep app", "CV template", "Clinical portfolio guide", "MedAI app"], ai: "AI runs you through board-style clinical scenario questions, identifies your weak areas, and builds a personalized study plan for your specific certification." },
+    ]
+  },
   // ── FREELANCE ──
   {
     id: "freelance-writing",
@@ -748,7 +767,7 @@ function Homepage({ onStudent, onLearner }) {
           We Are Not Teaching AI.<br/>We Are Putting AI to Work.
         </h1>
         <p style={{ fontSize: "clamp(14px, 2.5vw, 18px)", color: "rgba(255,255,255,0.8)", maxWidth: 560, lineHeight: 1.7, margin: "0 0 48px" }}>
-          19 tracks. 6 weeks each. Real tools. Real AI mentors. Built for students and lifelong learners across Africa and the diaspora.
+          20 tracks. 6 weeks each. Real tools. Real AI mentors. Built for students and lifelong learners across Africa and the diaspora.
         </p>
 
         {/* Two path cards */}
@@ -803,7 +822,7 @@ function Homepage({ onStudent, onLearner }) {
         {/* Stats strip */}
         <div style={{ display: "flex", gap: 32, flexWrap: "wrap", justifyContent: "center", marginTop: 52 }}>
           {[
-            { num: "19", label: "Learning Tracks" },
+            { num: "20", label: "Learning Tracks" },
             { num: "6", label: "Weeks Per Track" },
             { num: "25K+", label: "Community Members" },
             { num: "5", label: "Countries" },
