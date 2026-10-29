@@ -1,16 +1,18 @@
-## Hi there 👋
+# Lumo Hubs App (v2)
 
-<!--
-**lumohubs/Lumohubs** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
+We don't just teach AI. We put it to work.
 
-Here are some ideas to get you started:
+## What's inside
+- 20 live tracks and 6 Coming Soon previews, with Foundation (free) and Advanced (employer paid) levels
+- Company software and a hands on example in every track
+- AI Mentor and photo checks on every week, powered by Claude
+- Find your track quiz, AI Business Builder, career help
+- Lumo Talent Network: jobs, internships, live projects, AI candidate matching
+- Employer dashboard, student tracking, hub booking, outcomes dashboard
+- PlumberFix AI: train plumbers and hire them
+- English and Arabic menus
 
-- 🔭 I’m currently working on ...
-- 🌱 I’m currently learning ...
-- 👯 I’m looking to collaborate on ...
-- 🤔 I’m looking for help with ...
-- 💬 Ask me about ...
-- 📫 How to reach me: ...
-- 😄 Pronouns: ...
-- ⚡ Fun fact: ...
--->
+## Settings in Vercel (Project > Settings > Environment Variables)
+- ANTHROPIC_API_KEY: your Claude API key (required for AI features)
+- ACCESS_CODE: the code people type to enter (optional; leave empty to keep the site open)
+- CLAUDE_MODEL: optional, defaults to claude-sonnet-5-5
