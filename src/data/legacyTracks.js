@@ -3,7 +3,7 @@ export const LEGACY_TRACKS = [
   {
     id: "plumbing",
     name: "Plumbing",
-    icon: "🔧",
+    icon: "Wrench",
     type: "vocational",
     agent: "PlumberFix AI",
     tagline: "Fix it. Build it. Understand it.",
@@ -22,7 +22,7 @@ export const LEGACY_TRACKS = [
   {
     id: "electrical",
     name: "Electrical",
-    icon: "⚡",
+    icon: "PlugZap",
     type: "vocational",
     agent: "Circuit AI",
     tagline: "Wire it. Test it. Power it.",
@@ -41,7 +41,7 @@ export const LEGACY_TRACKS = [
   {
     id: "woodwork",
     name: "Woodworking",
-    icon: "🪵",
+    icon: "Hammer",
     type: "vocational",
     agent: "CraftAI",
     tagline: "Cut it. Shape it. Build it.",
@@ -60,7 +60,7 @@ export const LEGACY_TRACKS = [
   {
     id: "construction",
     name: "Construction",
-    icon: "🏗️",
+    icon: "HardHat",
     type: "vocational",
     agent: "BuildAI",
     tagline: "Plan it. Pour it. Raise it.",
@@ -79,7 +79,7 @@ export const LEGACY_TRACKS = [
   {
     id: "agriculture",
     name: "Agriculture & Aquaponics",
-    icon: "🌱",
+    icon: "Sprout",
     type: "vocational",
     agent: "GrowAI",
     tagline: "Grow it. Harvest it. Feed it.",
@@ -98,7 +98,7 @@ export const LEGACY_TRACKS = [
   {
     id: "hvac",
     name: "HVAC",
-    icon: "❄️",
+    icon: "Snowflake",
     type: "vocational",
     agent: "ClimateAI",
     tagline: "Cool it. Heat it. Control it.",
@@ -117,7 +117,7 @@ export const LEGACY_TRACKS = [
   {
     id: "solar",
     name: "Solar & Renewable Energy",
-    icon: "☀️",
+    icon: "Sun",
     type: "vocational",
     agent: "SolarAI",
     tagline: "Capture it. Store it. Power it.",
@@ -136,7 +136,7 @@ export const LEGACY_TRACKS = [
   {
     id: "auto",
     name: "Auto Mechanics & EV",
-    icon: "🚗",
+    icon: "Car",
     type: "vocational",
     agent: "MechanicAI",
     tagline: "Diagnose it. Fix it. Drive it.",
@@ -155,7 +155,7 @@ export const LEGACY_TRACKS = [
   {
     id: "welding",
     name: "Welding & Metal Fabrication",
-    icon: "🔥",
+    icon: "Flame",
     type: "vocational",
     agent: "WeldAI",
     tagline: "Fuse it. Shape it. Strengthen it.",
@@ -174,7 +174,7 @@ export const LEGACY_TRACKS = [
   {
     id: "healthcare",
     name: "Healthcare & Medical Careers",
-    icon: "🏥",
+    icon: "HeartPulse",
     type: "vocational",
     agent: "MedAI",
     tagline: "Diagnose it. Treat it. Save lives.",
@@ -194,7 +194,7 @@ export const LEGACY_TRACKS = [
   {
     id: "freelance-writing",
     name: "Writing & Content",
-    icon: "✍️",
+    icon: "PenLine",
     type: "freelance",
     tagline: "Write. Earn. Repeat.",
     description: "Get paid to write for businesses online. Learn copywriting, blogging, and content strategy through real AI-assisted projects.",
@@ -212,7 +212,7 @@ export const LEGACY_TRACKS = [
   {
     id: "freelance-design",
     name: "Design & Creative",
-    icon: "🎨",
+    icon: "Palette",
     type: "freelance",
     tagline: "Design. Deliver. Get Paid.",
     description: "Learn logo design, social media graphics, and video editing for paying clients on Fiverr and Upwork.",
@@ -230,7 +230,7 @@ export const LEGACY_TRACKS = [
   {
     id: "freelance-tech",
     name: "Tech & Development",
-    icon: "💻",
+    icon: "Code",
     type: "freelance",
     tagline: "Build. Deploy. Invoice.",
     description: "Learn web development and tech freelancing. Build real websites for real clients using AI as your coding partner.",
@@ -248,7 +248,7 @@ export const LEGACY_TRACKS = [
   {
     id: "freelance-marketing",
     name: "Marketing & Social Media",
-    icon: "📈",
+    icon: "Megaphone",
     type: "freelance",
     tagline: "Grow brands. Get paid.",
     description: "Learn social media management, SEO, and digital marketing for businesses using AI tools to work faster and smarter.",
@@ -267,7 +267,7 @@ export const LEGACY_TRACKS = [
   {
     id: "media-youtube",
     name: "YouTube & Video Production",
-    icon: "🎬",
+    icon: "Video",
     type: "creative",
     tagline: "Script it. Shoot it. Publish it.",
     description: "Learn video production from scripting to editing to publishing. Build a channel or produce videos for paying clients.",
@@ -285,7 +285,7 @@ export const LEGACY_TRACKS = [
   {
     id: "media-gaming",
     name: "Game Development",
-    icon: "🎮",
+    icon: "Gamepad2",
     type: "creative",
     tagline: "Design it. Code it. Launch it.",
     description: "Learn game development from concept to launch. Build real games using AI to write code, generate assets, and solve design problems.",
@@ -304,7 +304,7 @@ export const LEGACY_TRACKS = [
   {
     id: "business-systems",
     name: "Business Systems & Tools",
-    icon: "🖥️",
+    icon: "Monitor",
     type: "business",
     tagline: "Learn the tools. Get the job.",
     description: "Most graduates can't get hired because they have never touched the software businesses run on. Learn Salesforce, Monday.com, HubSpot, Slack, Notion, and more, with AI as your trainer so you practice like it is a real job.",
@@ -323,7 +323,7 @@ export const LEGACY_TRACKS = [
   {
     id: "ecommerce",
     name: "E-Commerce",
-    icon: "🛒",
+    icon: "ShoppingCart",
     type: "ecommerce",
     tagline: "List it. Sell it. Scale it.",
     description: "Learn to build and run an online store from scratch. Shopify, Amazon, Etsy, and social selling, with AI handling the heavy lifting so you focus on selling.",
@@ -341,7 +341,7 @@ export const LEGACY_TRACKS = [
   {
     id: "ai-cybersecurity",
     name: "AI & Cybersecurity",
-    icon: "🔐",
+    icon: "ShieldCheck",
     type: "tech",
     tagline: "Protect it. Detect it. Defend it.",
     description: "Learn to secure systems and use AI to detect threats. One of the fastest-growing career paths globally. Leads to CompTIA Security+, SOC analyst roles, and AI security positions.",
@@ -360,7 +360,7 @@ export const LEGACY_TRACKS = [
   {
     id: "entrepreneurship",
     name: "Entrepreneurship",
-    icon: "🚀",
+    icon: "Rocket",
     type: "entrepreneurship",
     tagline: "Idea it. Build it. Launch it.",
     description: "Build and launch a real business in 6 weeks. AI supports every stage from idea validation to your first paying customer.",

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { trackById } from "../data/tracks";
 import { askClaude } from "../ai";
+import { Icon } from "./Icons";
 
 // Student work saves in this browser for now (no logins yet).
 // Shape: { weeks: { "trackId:week": { submission, quiz } }, portfolio: [items] }
@@ -89,9 +90,9 @@ export function FileList({ files, onRemove }) {
     <div className="row" style={{ marginTop: 8, flexWrap: "wrap" }}>
       {files.map((f, i) => (
         <span key={i} className="chip" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-          {f.type.startsWith("image/") ? <img src={f.url} alt="" style={{ width: 22, height: 22, objectFit: "cover", borderRadius: 4 }} /> : <span aria-hidden>📄</span>}
+          {f.type.startsWith("image/") ? <img src={f.url} alt="" style={{ width: 22, height: 22, objectFit: "cover", borderRadius: 4 }} /> : <Icon name="FileText" size={16} />}
           <a href={f.url} download={f.name} style={{ color: "inherit" }}>{f.name}</a>
-          {onRemove && <button aria-label={"Remove " + f.name} onClick={() => onRemove(i)} style={{ border: 0, background: "none", cursor: "pointer", padding: 0 }}>✕</button>}
+          {onRemove && <button aria-label={"Remove " + f.name} onClick={() => onRemove(i)} style={{ border: 0, background: "none", cursor: "pointer", padding: 0, display: "inline-flex" }}><Icon name="X" size={14} /></button>}
         </span>
       ))}
     </div>

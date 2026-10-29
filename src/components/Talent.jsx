@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { EMPLOYERS, JOBS, LEARNERS, PROJECTS } from "../data/demo";
 import { trackById } from "../data/tracks";
 import { askClaude } from "../ai";
+import { Markdown } from "./Markdown";
 import { MyPortfolio } from "./Work";
 
 export const employerById = (id) => EMPLOYERS.find((e) => e.id === id);
@@ -116,7 +117,6 @@ function People() {
     const r = await askClaude({
       system: "You help employers understand candidate fit. Plain language, 3 short sentences, no dashes. Be fair and only use the facts given.",
       prompt: `Job: ${job.title}. Needs: ${job.skills.join(", ")}.\nCandidate: ${l.headline}. Skills: ${l.skills.join(", ")}. Track: ${trackById(l.track).name}, ${l.progress}% complete. Projects: ${l.projects.join("; ") || "none yet"}.\nExplain the fit and one gap to ask about in the interview.`,
-      maxTokens: 250,
     });
     setWhy((w) => ({ ...w, [l.id]: r.error || r.text }));
   }
@@ -143,7 +143,7 @@ function People() {
               <button className="btn ghost small" onClick={() => explain(l)}>Why this match?</button>
               <button className="btn small">Message</button>
             </div>
-            {why[l.id] && <div className="ai-box small">{why[l.id]}</div>}
+            {why[l.id] && <div className="ai-box small"><Markdown text={why[l.id]} /></div>}
           </div>
         ))}
       </div>
@@ -196,7 +196,7 @@ export function Profile({ me, progress }) {
       cover: `Write a short cover letter (under 170 words) for a ${track.name} role. Plain human voice, no dashes. Only use these facts. ${facts}`,
       interview: `Give 4 likely interview questions for a ${track.name} role and a strong sample answer for each, 2 sentences each, using only these facts. ${facts}`,
     };
-    const r = await askClaude({ system: "You are a career coach at Lumo Hubs. Plain language. Never invent experience.", prompt: prompts[kind], maxTokens: 700 });
+    const r = await askClaude({ system: "You are a career coach at Lumo Hubs. Plain language. Never invent experience.", prompt: prompts[kind] });
     setOut(r.error || r.text); setBusy(false);
   }
 
@@ -244,7 +244,7 @@ export function Profile({ me, progress }) {
           <button className="btn small" disabled={busy} onClick={() => help("interview")}>Practice interview questions</button>
         </div>
         {busy && <p className="muted small" style={{ marginTop: 10 }}>Writing your {tool}...</p>}
-        {out && <div className="ai-box">{out}<div className="ai-src">Career coach, powered by Claude</div></div>}
+        {out && <div className="ai-box"><Markdown text={out} /><div className="ai-src">Career coach, powered by Claude</div></div>}
       </div>
     </div>
   );

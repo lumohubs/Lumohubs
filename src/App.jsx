@@ -6,6 +6,7 @@ import { TrackLibrary, TrackDetail, TrackQuiz } from "./components/Tracks";
 import { TalentNetwork, Profile } from "./components/Talent";
 import { EmployerDashboard, StudentTracking, Outcomes } from "./components/Dashboards";
 import { HubBooking, BusinessBuilder, PlumberFix } from "./components/Services";
+import { Icon, IconBadge } from "./components/Icons";
 
 const ME = { student: "l1", community: "l3", professional: "l4" };
 
@@ -80,12 +81,12 @@ function Home({ go, setRole, openTrack }) {
       <div className="section">
         <div className="row between"><h2 style={{ margin: 0 }}>Popular tracks</h2><button className="btn ghost small" onClick={() => go("tracks")}>See all {LIVE_TRACKS.length + SOON_TRACKS.length} tracks</button></div>
         <div className="grid g4" style={{ marginTop: 14 }}>
-          {["banking", "energy", "data-analytics", "plumbing"].map((id) => {
+          {["banking", "energy", "data-analytics", "plumbing"].map((id, i) => {
             const t = LIVE_TRACKS.find((x) => x.id === id);
             return (
               <button key={id} className="card-btn" onClick={() => openTrack(id)}>
-                <span style={{ fontSize: 26 }} aria-hidden>{t.icon}</span>
-                <h3 style={{ marginTop: 6, fontSize: "1.05rem" }}>{t.name}</h3>
+                <IconBadge name={t.icon} index={i} />
+                <h3 style={{ marginTop: 10, fontSize: "1.05rem" }}>{t.name}</h3>
                 <div className="small muted">{t.avgPay}</div>
               </button>
             );
@@ -97,9 +98,9 @@ function Home({ go, setRole, openTrack }) {
 }
 
 const NAV = [
-  { group: "learn", items: [["home", "🏠"], ["tracks", "📚"], ["quiz", "🧭"], ["portfolio", "🪪"], ["builder", "🚀"]] },
-  { group: "work", items: [["talent", "💼"], ["employer", "🏢"], ["plumberfix", "🔧"]] },
-  { group: "run", items: [["tracking", "📋"], ["hub", "🎙️"], ["outcomes", "📈"]] },
+  { group: "learn", items: [["home", "Home"], ["tracks", "BookOpen"], ["quiz", "Compass"], ["portfolio", "IdCard"], ["builder", "Rocket"]] },
+  { group: "work", items: [["talent", "Briefcase"], ["employer", "Building2"], ["plumberfix", "Wrench"]] },
+  { group: "run", items: [["tracking", "ClipboardList"], ["hub", "Mic"], ["outcomes", "TrendingUp"]] },
 ];
 
 export default function App() {
@@ -137,7 +138,7 @@ export default function App() {
       <div className="nav-group">{t[g.group]}</div>
       {g.items.map(([k, icon]) => (
         <button key={k} className={`nav-btn ${view === k ? "active" : ""}`} onClick={() => go(k)} aria-current={view === k ? "page" : undefined}>
-          <span aria-hidden>{icon}</span>{t[k]}
+          <Icon name={icon} /><span>{t[k]}</span>
         </button>
       ))}
     </div>
@@ -167,7 +168,7 @@ export default function App() {
       <div className="main">
         <div className="mobile-nav" aria-label="Main menu">
           {NAV.flatMap((g) => g.items).map(([k, icon]) => (
-            <button key={k} className={`nav-btn ${view === k ? "active" : ""}`} onClick={() => go(k)}><span aria-hidden>{icon}</span>{t[k]}</button>
+            <button key={k} className={`nav-btn ${view === k ? "active" : ""}`} onClick={() => go(k)}><Icon name={icon} /><span>{t[k]}</span></button>
           ))}
         </div>
         <header className="topbar">

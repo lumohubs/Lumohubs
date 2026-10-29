@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { HUB_SPACES, HUB_HOURS, PLUMBERS, LEARNERS } from "../data/demo";
 import { askClaude, readImage } from "../ai";
+import { Markdown } from "./Markdown";
+import { IconBadge } from "./Icons";
 import { Avatar } from "./Talent";
 import { Stat } from "./Dashboards";
 
@@ -26,9 +28,9 @@ export function HubBooking({ role }) {
       <h2>Hub booking</h2>
       <p className="muted">Book studios and labs by the hour. Open 9am to 9pm. Students pay a discounted rate.</p>
       <div className="grid g3 section" style={{ marginTop: 16 }}>
-        {HUB_SPACES.map((x) => (
+        {HUB_SPACES.map((x, i) => (
           <button key={x.id} className="card-btn" disabled={x.soon} onClick={() => { setSpace(x.id); setPicked([]); }} style={{ borderColor: space === x.id ? "var(--plum)" : undefined, borderWidth: space === x.id ? 2 : 1, opacity: x.soon ? 0.55 : 1 }}>
-            <div className="row between"><span style={{ fontSize: 26 }} aria-hidden>{x.icon}</span>{x.soon && <span className="chip gold">Coming soon</span>}</div>
+            <div className="row between"><IconBadge name={x.icon} index={i} />{x.soon && <span className="chip gold">Coming soon</span>}</div>
             <strong>{x.name}</strong>
             <div className="small muted">QAR {x.rate}/hr, students QAR {x.student}/hr</div>
           </button>
@@ -81,7 +83,6 @@ export function BusinessBuilder() {
     const r = await askClaude({
       system: "You are the Lumo Hubs AI Business Builder. You coach student teams from idea to launch. Plain language, short sections, no dashes, practical steps. Assume the team has a small budget and access to a Lumo hub (studios, labs, mentors).",
       prompt: `Our idea: ${idea}\nOur team: ${team || "not given"}\n\nGive us:\n1. The problem and who pays, in 2 sentences\n2. Our first product, kept small\n3. A 6 step launch plan for the next 30 days\n4. How we make money, with a simple price\n5. Three risks and how to test each cheaply\n6. Which Lumo hub spaces or tracks would help us`,
-      maxTokens: 1100,
     });
     if (r.error) setErr(r.error); else setOut(r.text);
     setBusy(false);
@@ -99,7 +100,7 @@ export function BusinessBuilder() {
         <button className="btn" style={{ marginTop: 12 }} disabled={busy || !idea.trim()} onClick={build}>{busy ? "Building your plan..." : "Build my launch plan"}</button>
         {err && <div className="err">{err}</div>}
       </div>
-      {out && <div className="ai-box" style={{ marginTop: 16 }}>{out}<div className="ai-src">AI Business Builder, powered by Claude</div></div>}
+      {out && <div className="ai-box" style={{ marginTop: 16 }}><Markdown text={out} /><div className="ai-src">AI Business Builder, powered by Claude</div></div>}
     </div>
   );
 }
@@ -111,7 +112,7 @@ export function PlumberFix({ onOpenTrack }) {
       <div className="row between">
         <div>
           <h2 style={{ margin: 0 }}>PlumberFix AI</h2>
-          <p className="muted" style={{ marginTop: 6 }}>The first company built inside Lumo Hubs. Train plumbers, then send them real jobs.</p>
+          <p className="muted" style={{ marginTop: 6 }}>The first company built inside Lumo Hubs. Train plumbers and connect them to jobs.</p>
         </div>
         <div className="seg">
           {[["hire", "Hire a plumber"], ["train", "Train"], ["pros", "For plumbers"]].map(([k, l]) => <button key={k} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>{l}</button>)}
@@ -141,7 +142,6 @@ function HirePlumber() {
       system: "You are PlumberFix AI. You help homeowners understand a plumbing problem before a plumber arrives. Plain language, under 160 words, no dashes. Give: what it likely is, how urgent it is (low, medium, or urgent), one safe thing to do now, and a rough price range in QAR. Say a licensed plumber will confirm.",
       prompt: `Problem: ${desc || "see photo"}. Area: ${area}.`,
       image: photo,
-      maxTokens: 400,
     });
     if (r.error) setErr(r.error); else setDiag(r.text);
     setBusy(false);
@@ -174,7 +174,7 @@ function HirePlumber() {
         {photo && <img src={photo.url} alt="Your plumbing problem" style={{ maxHeight: 150, borderRadius: 8, marginTop: 10 }} />}
         <button className="btn teal" style={{ marginTop: 12 }} disabled={busy || (!desc.trim() && !photo)} onClick={check}>{busy ? "Checking..." : "Check it with AI"}</button>
         {err && <div className="err">{err}</div>}
-        {diag && <div className="ai-box">{diag}<div className="ai-src">PlumberFix AI, powered by Claude</div></div>}
+        {diag && <div className="ai-box"><Markdown text={diag} /><div className="ai-src">PlumberFix AI, powered by Claude</div></div>}
       </div>
       <div className="panel">
         <h3>Plumbers near you</h3>

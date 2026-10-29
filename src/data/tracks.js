@@ -11,7 +11,7 @@ export const SECTORS = [
 // New professional tracks built for Qatar's educated workforce.
 const PRO_TRACKS = [
   {
-    id: "banking", name: "AI for Banking and Finance", icon: "🏦", agent: "LedgerAI",
+    id: "banking", name: "AI for Banking and Finance", icon: "Banknote", agent: "LedgerAI",
     tagline: "Faster reports. Smarter risk calls.",
     description: "For bankers, analysts, and compliance staff. Use AI to write credit memos, spot fraud, and serve customers faster, on the tools banks already run.",
     demand: "Very High", avgPay: "$35 to $120/hr",
@@ -25,7 +25,7 @@ const PRO_TRACKS = [
     ],
   },
   {
-    id: "government", name: "AI for Government", icon: "🏛️", agent: "CivicAI",
+    id: "government", name: "AI for Government", icon: "Landmark", agent: "CivicAI",
     tagline: "Better services. Faster answers.",
     description: "For ministry and public sector staff. Use AI to write briefs, plan with data, and help citizens faster.",
     demand: "High", avgPay: "$30 to $100/hr",
@@ -39,7 +39,7 @@ const PRO_TRACKS = [
     ],
   },
   {
-    id: "energy", name: "AI for Energy", icon: "⚡", agent: "GridAI",
+    id: "energy", name: "AI for Energy", icon: "Zap", agent: "GridAI",
     tagline: "Fix it before it breaks.",
     description: "For oil, gas, and utility staff. Use AI to predict equipment problems, speed up safety checks, and read plant data.",
     demand: "Very High", avgPay: "$40 to $130/hr",
@@ -53,7 +53,7 @@ const PRO_TRACKS = [
     ],
   },
   {
-    id: "ai-hr", name: "AI for HR", icon: "🤝", agent: "PeopleAI",
+    id: "ai-hr", name: "AI for HR", icon: "Users", agent: "PeopleAI",
     tagline: "Hire fairly. Train faster.",
     description: "For HR and talent teams. Use AI to write job posts, screen fairly, build training plans, and track Qatarization goals.",
     demand: "High", avgPay: "$25 to $90/hr",
@@ -67,7 +67,7 @@ const PRO_TRACKS = [
     ],
   },
   {
-    id: "data-analytics", name: "Data and Analytics", icon: "📊", agent: "InsightAI",
+    id: "data-analytics", name: "Data and Analytics", icon: "BarChart3", agent: "InsightAI",
     tagline: "Turn numbers into decisions.",
     description: "For anyone who works with numbers. Clean data, ask AI questions about it, and build dashboards your manager will use.",
     demand: "Very High", avgPay: "$25 to $95/hr",
@@ -81,7 +81,7 @@ const PRO_TRACKS = [
     ],
   },
   {
-    id: "ai-pm", name: "AI Project Management", icon: "🗂️", agent: "PlanAI",
+    id: "ai-pm", name: "AI Project Management", icon: "KanbanSquare", agent: "PlanAI",
     tagline: "On time. On budget. Less stress.",
     description: "For managers and team leads. Plan, track, and report on projects with AI doing the busywork.",
     demand: "High", avgPay: "$30 to $100/hr",

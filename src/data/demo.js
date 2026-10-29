@@ -37,12 +37,12 @@ export const PROJECTS = [
 ];
 
 export const HUB_SPACES = [
-  { id: "h1", name: "Podcast booth", icon: "🎙️", rate: 100, student: 40 },
-  { id: "h2", name: "YouTube room", icon: "🎬", rate: 100, student: 40 },
-  { id: "h3", name: "Photo set", icon: "📸", rate: 80, student: 30 },
-  { id: "h4", name: "Plumbing lab", icon: "🔧", rate: 60, student: 20 },
-  { id: "h5", name: "Electrical lab", icon: "💡", rate: 60, student: 20 },
-  { id: "h6", name: "Woodshop", icon: "🪚", rate: 60, student: 20, soon: true },
+  { id: "h1", name: "Podcast booth", icon: "Mic", rate: 100, student: 40 },
+  { id: "h2", name: "YouTube room", icon: "Video", rate: 100, student: 40 },
+  { id: "h3", name: "Photo set", icon: "Camera", rate: 80, student: 30 },
+  { id: "h4", name: "Plumbing lab", icon: "Wrench", rate: 60, student: 20 },
+  { id: "h5", name: "Electrical lab", icon: "Lightbulb", rate: 60, student: 20 },
+  { id: "h6", name: "Woodshop", icon: "Hammer", rate: 60, student: 20, soon: true },
 ];
 
 export const HUB_HOURS = ["9:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00"];

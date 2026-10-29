@@ -1,4 +1,4 @@
-export async function askClaude({ system, prompt, image, messages, maxTokens = 900 }) {
+export async function askClaude({ system, prompt, image, messages, maxTokens = 1500 }) {
   // Send a full chat (messages) for Q and A, or a single prompt (with an optional photo).
   let msgs = messages;
   if (!Array.isArray(msgs) || msgs.length === 0) {
@@ -15,7 +15,9 @@ export async function askClaude({ system, prompt, image, messages, maxTokens = 9
     });
     const data = await r.json().catch(() => ({}));
     if (!r.ok) return { error: data.error || "The AI mentor is not available right now." };
-    return { text: data.text };
+    // If the answer still ran out of room, say so instead of stopping mid sentence.
+    const note = data.truncated ? "\n\n*This answer was cut short. Ask me to continue.*" : "";
+    return { text: (data.text || "") + note, truncated: !!data.truncated };
   } catch {
     return { error: "No connection. Check your internet and try again." };
   }

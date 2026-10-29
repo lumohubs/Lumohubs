@@ -11,7 +11,7 @@ export default async function handler(req, res) {
       headers: { "content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
       body: JSON.stringify({
         model: process.env.CLAUDE_MODEL || "claude-sonnet-5-5",
-        max_tokens: Math.min(Number(max_tokens) || 1000, 2000),
+        max_tokens: Math.min(Math.max(Number(max_tokens) || 1500, 1500), 2000),
         system: system || "You are a helpful mentor at Lumo Hubs. Use plain language.",
         messages,
       }),
@@ -19,7 +19,7 @@ export default async function handler(req, res) {
     const data = await r.json();
     if (!r.ok) return res.status(r.status).json({ error: data?.error?.message || "The AI service returned an error." });
     const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
-    return res.status(200).json({ text });
+    return res.status(200).json({ text, truncated: data.stop_reason === "max_tokens" });
   } catch (e) {
     return res.status(500).json({ error: "Could not reach the AI service. Try again in a minute." });
   }

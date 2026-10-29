@@ -3,6 +3,8 @@ import { SECTORS, TRACKS, LIVE_TRACKS, trackById } from "../data/tracks";
 import { QUIZ } from "../data/demo";
 import { askClaude, readImage } from "../ai";
 import { useWork, weekKey, newId, assignmentFor, SubmitWork, WeekQuiz } from "./Work";
+import { Markdown } from "./Markdown";
+import { Icon, IconBadge } from "./Icons";
 
 const PHOTO_SECTORS = ["trades"];
 const canPhoto = (t) => PHOTO_SECTORS.includes(t.sector) || t.id === "healthcare";
@@ -30,13 +32,13 @@ export function TrackLibrary({ onOpen, lang }) {
         <input className="input" style={{ maxWidth: 240 }} placeholder="Search tracks" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search tracks" />
       </div>
       <div className="grid g3">
-        {live.map((t) => <TrackCard key={t.id} t={t} onOpen={onOpen} />)}
+        {live.map((t, i) => <TrackCard key={t.id} t={t} index={i} onOpen={onOpen} />)}
       </div>
       {soon.length > 0 && (
         <div className="section">
           <h3>Coming soon</h3>
           <p className="muted small">Open any of these to see the full plan. Join the waitlist and we'll tell you when it launches.</p>
-          <div className="grid g3">{soon.map((t) => <TrackCard key={t.id} t={t} onOpen={onOpen} />)}</div>
+          <div className="grid g3">{soon.map((t, i) => <TrackCard key={t.id} t={t} index={i} onOpen={onOpen} />)}</div>
         </div>
       )}
       {list.length === 0 && <div className="empty">No tracks match that search. Try a shorter word.</div>}
@@ -44,11 +46,11 @@ export function TrackLibrary({ onOpen, lang }) {
   );
 }
 
-function TrackCard({ t, onOpen }) {
+function TrackCard({ t, index, onOpen }) {
   return (
     <button className="card-btn" onClick={() => onOpen(t.id)}>
       <div className="row between">
-        <span style={{ fontSize: 28 }} aria-hidden>{t.icon}</span>
+        <IconBadge name={t.icon} index={index} />
         {t.status === "soon" ? <span className="chip gold">Coming soon</span> : <span className="chip teal">{t.demand} demand</span>}
       </div>
       <h3 style={{ marginTop: 8 }}>{t.name}</h3>
@@ -74,7 +76,7 @@ export function TrackDetail({ id, onBack, onJoinWaitlist, waitlist, progress, se
     <div>
       <button className="back" onClick={onBack}>Back to tracks</button>
       <div className="row" style={{ alignItems: "flex-start", gap: 18 }}>
-        <span style={{ fontSize: 46 }} aria-hidden>{t.icon}</span>
+        <IconBadge name={t.icon} index={0} size={56} />
         <div style={{ flex: 1, minWidth: 260 }}>
           <div className="row">
             <h2 style={{ margin: 0 }}>{t.name}</h2>
@@ -129,54 +131,14 @@ export function TrackDetail({ id, onBack, onJoinWaitlist, waitlist, progress, se
       <h3>Your 6 week plan</h3>
       <div className="grid" style={{ gap: 12 }}>
         {t.weeks.map((w) => (
-          <WeekCard key={w.week} t={t} w={w} locked={soon} done={done.includes(w.week)} onComplete={() => markDone(w.week)} />
+          <WeekCard key={w.week} t={t} w={w} level={level} locked={soon} done={done.includes(w.week)} onComplete={() => markDone(w.week)} />
         ))}
       </div>
     </div>
   );
 }
 
-// Turns the mentor's reply into clean text: bold, headings and lists, with no stars showing.
-function renderInline(text, keyBase) {
-  const parts = String(text).split(/(\*\*[^*]+\*\*)/g);
-  return parts.map((p, i) =>
-    p.startsWith("**") && p.endsWith("**") && p.length > 4
-      ? <strong key={keyBase + "-" + i}>{p.slice(2, -2)}</strong>
-      : p.replace(/\*/g, "")
-  );
-}
-
-function RichText({ text }) {
-  const lines = String(text || "").replace(/\r/g, "").split("\n");
-  const out = [];
-  let list = null;
-  const flush = () => {
-    if (!list) return;
-    const k = "list-" + out.length;
-    out.push(list.ordered ? <ol key={k} style={{ margin: "6px 0", paddingInlineStart: 22 }}>{list.items}</ol> : <ul key={k} style={{ margin: "6px 0", paddingInlineStart: 22 }}>{list.items}</ul>);
-    list = null;
-  };
-  lines.forEach((raw, i) => {
-    const line = raw.trim();
-    if (!line || /^[-*_]{3,}$/.test(line)) { flush(); return; }
-    const h = line.match(/^#{1,6}\s+(.*)$/);
-    if (h) { flush(); out.push(<div key={i} style={{ fontWeight: 700, marginTop: 10 }}>{renderInline(h[1], i)}</div>); return; }
-    const b = line.match(/^[-*•]\s+(.*)$/);
-    const n = line.match(/^\d+[.)]\s+(.*)$/);
-    if (b || n) {
-      const ordered = !!n;
-      if (!list || list.ordered !== ordered) { flush(); list = { ordered, items: [] }; }
-      list.items.push(<li key={i}>{renderInline((b || n)[1], i)}</li>);
-      return;
-    }
-    flush();
-    out.push(<p key={i} style={{ margin: "6px 0" }}>{renderInline(line, i)}</p>);
-  });
-  flush();
-  return <div>{out}</div>;
-}
-
-function WeekCard({ t, w, locked, done, onComplete }) {
+function WeekCard({ t, w, level, locked, done, onComplete }) {
   const [open, setOpen] = useState(w.week === 1);
   const [busy, setBusy] = useState(false);
   const [chat, setChat] = useState([]);
@@ -202,16 +164,17 @@ function WeekCard({ t, w, locked, done, onComplete }) {
     if (submitted && quizPassed && !done && onComplete) onComplete();
   }, [submitted, quizPassed, done, onComplete]);
 
+  // Sent with every mentor request so the AI always knows where the student is.
+  const levelName = level === "advanced" ? "Advanced (employer paid)" : "Foundation (free)";
   const system = [
-    "You are " + mentor + ", the AI mentor at Lumo Hubs for the " + t.name + " track.",
-    "You know this course well. The student is in Week " + w.week + " of 6: \"" + w.title + "\".",
-    "This week's focus: " + w.focus + ".",
-    "Tools this week: " + (w.tools || []).join(", ") + ".",
+    "You are the Lumo Hubs mentor. This is the student's current week. Never say you can't see the course or the assignment list. Answer using the week details given.",
+    "Current week details. Track: " + t.name + ". Level: " + levelName + ". Week: " + w.week + " of 6. Week title: " + w.title + ". Topic: " + w.focus + " Tools: " + (w.tools || []).join(", ") + ".",
+    "Your name is " + mentor + ", the AI mentor for the " + t.name + " track.",
     w.ai ? "How AI helps this week: " + w.ai + "." : "",
     "This week's assignment: " + assignment,
     t.software ? "Company software in this track: " + t.software.join(", ") + "." : "",
     t.example ? "Hands on example for this track: " + t.example : "",
-    "Never say you cannot see the course, syllabus, lessons or assignments. The details above are the course. Teach from them.",
+    "The details above are the course. Teach from them, and never say you cannot see the syllabus, lessons or assignments.",
     "This is a coaching chat. When the student asks to get started, walk them through the assignment in clear numbered steps they can do today, say what to submit at the end, then ask if they are ready for step 1.",
     "When the student asks for practice questions, ask ONE clear question about this week and stop so they can type an answer. When they answer, say what they got right, fix what is wrong or missing, give a score out of 10, then ask the next question.",
     "When the student submits work, review it against the assignment: what is good, what to improve, and a score out of 10.",
@@ -265,7 +228,7 @@ function WeekCard({ t, w, locked, done, onComplete }) {
       }
       return { role: m.role, content: (m.api || m.text) + (m.blocks ? " (I shared files here.)" : "") };
     });
-    const r = await askClaude({ system, messages, maxTokens: 1000 });
+    const r = await askClaude({ system, messages });
     if (r.error) {
       setError(r.error);
       setChat(before);
@@ -320,8 +283,8 @@ function WeekCard({ t, w, locked, done, onComplete }) {
           ) : (
             <>
               <div className="row small" style={{ marginTop: 10 }}>
-                <span className={"chip " + (submitted ? "green" : "")}>{submitted ? "✓ Work submitted" : "Work: to do"}</span>
-                <span className={"chip " + (quizPassed ? "green" : "")}>{quizPassed ? "✓ Quiz passed" : "Quiz: to do"}</span>
+                <span className={"chip " + (submitted ? "green" : "")}>{submitted ? <><Icon name="Check" size={14} /> Work submitted</> : "Work: to do"}</span>
+                <span className={"chip " + (quizPassed ? "green" : "")}>{quizPassed ? <><Icon name="Check" size={14} /> Quiz passed</> : "Quiz: to do"}</span>
               </div>
 
               <div className="panel tint" style={{ marginTop: 12 }}>
@@ -338,7 +301,7 @@ function WeekCard({ t, w, locked, done, onComplete }) {
                     <div key={i} style={{ marginBottom: 12 }}>
                       <div className="small" style={{ fontWeight: 700 }}>{m.role === "user" ? "You" : mentor}</div>
                       {m.img && <img src={m.img.url} alt="Your upload" style={{ maxHeight: 120, borderRadius: 8, marginTop: 4 }} />}
-                      {m.role === "user" ? <p style={{ margin: "4px 0", whiteSpace: "pre-wrap" }}>{m.text}</p> : <RichText text={m.text} />}
+                      {m.role === "user" ? <p style={{ margin: "4px 0", whiteSpace: "pre-wrap" }}>{m.text}</p> : <Markdown text={m.text} />}
                     </div>
                   ))}
                   {busy && <div className="muted small">{mentor} is thinking...</div>}
@@ -427,12 +390,12 @@ export function TrackQuiz({ onOpen }) {
         {busy && <p className="muted">Matching your answers to tracks...</p>}
         {error && <div className="err">{error}</div>}
         <div className="grid g3" style={{ marginTop: 14 }}>
-          {(result || []).map((p) => {
+          {(result || []).map((p, i) => {
             const t = trackById(p.id);
             return (
               <button key={p.id} className="card-btn" onClick={() => onOpen(p.id)}>
-                <span style={{ fontSize: 28 }} aria-hidden>{t.icon}</span>
-                <h3 style={{ marginTop: 6 }}>{t.name}</h3>
+                <IconBadge name={t.icon} index={i} />
+                <h3 style={{ marginTop: 8 }}>{t.name}</h3>
                 <p className="small muted" style={{ margin: 0 }}>{p.why}</p>
               </button>
             );
