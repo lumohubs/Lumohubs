@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { SECTORS, TRACKS, LIVE_TRACKS, trackById } from "../data/tracks";
 import { QUIZ } from "../data/demo";
 import { askClaude, readImage } from "../ai";
+import { useWork, weekKey, newId, assignmentFor, SubmitWork, WeekQuiz } from "./Work";
 
 const PHOTO_SECTORS = ["trades"];
 const canPhoto = (t) => PHOTO_SECTORS.includes(t.sector) || t.id === "healthcare";
@@ -60,13 +61,15 @@ function TrackCard({ t, onOpen }) {
 export function TrackDetail({ id, onBack, onJoinWaitlist, waitlist, progress, setProgress }) {
   const t = trackById(id);
   const [level, setLevel] = useState("foundation");
+  const [work] = useWork();
   if (!t) return null;
   const soon = t.status === "soon";
   const done = progress[t.id] || [];
-  const toggle = (w) => {
-    const next = done.includes(w) ? done.filter((x) => x !== w) : [...done, w];
-    setProgress({ ...progress, [t.id]: next });
+  const markDone = (w) => {
+    if (!done.includes(w)) setProgress({ ...progress, [t.id]: [...done, w] });
   };
+  const submitted = t.weeks.filter((w) => work.weeks[weekKey(t, w)]?.submission).length;
+  const passed = t.weeks.filter((w) => work.weeks[weekKey(t, w)]?.quiz?.passed).length;
   return (
     <div>
       <button className="back" onClick={onBack}>Back to tracks</button>
@@ -111,7 +114,7 @@ export function TrackDetail({ id, onBack, onJoinWaitlist, waitlist, progress, se
             ) : (
               <p style={{ marginTop: 12 }}>Paid by employers. Companies send their staff, or sponsor students they want to hire. Advanced runs on real company systems and a live employer project.</p>
             )}
-            <div className="small muted">Your progress: {done.length} of 6 weeks</div>
+            <div className="small muted">Your progress: {done.length} of 6 weeks done. {submitted} of 6 assignments submitted. {passed} of 6 quizzes passed.</div>
             <div className="bar" style={{ marginTop: 6 }}><span style={{ width: `${(done.length / 6) * 100}%` }} /></div>
           </div>
           <div className="panel">
@@ -126,7 +129,7 @@ export function TrackDetail({ id, onBack, onJoinWaitlist, waitlist, progress, se
       <h3>Your 6 week plan</h3>
       <div className="grid" style={{ gap: 12 }}>
         {t.weeks.map((w) => (
-          <WeekCard key={w.week} t={t} w={w} locked={soon} done={done.includes(w.week)} onToggle={() => toggle(w.week)} />
+          <WeekCard key={w.week} t={t} w={w} locked={soon} done={done.includes(w.week)} onComplete={() => markDone(w.week)} />
         ))}
       </div>
     </div>
@@ -173,20 +176,31 @@ function RichText({ text }) {
   return <div>{out}</div>;
 }
 
-function WeekCard({ t, w, locked, done, onToggle }) {
+function WeekCard({ t, w, locked, done, onComplete }) {
   const [open, setOpen] = useState(w.week === 1);
   const [busy, setBusy] = useState(false);
   const [chat, setChat] = useState([]);
   const [error, setError] = useState("");
   const [photo, setPhoto] = useState(null);
   const [input, setInput] = useState("");
+  const [work, update] = useWork();
   const boxRef = useRef(null);
   const starter = w.week <= 2;
   const mentor = t.agent || "AI Mentor";
+  const key = weekKey(t, w);
+  const rec = work.weeks[key] || {};
+  const assignment = assignmentFor(t, w);
+  const submitted = !!rec.submission;
+  const quizPassed = !!(rec.quiz && rec.quiz.passed);
 
   useEffect(() => {
     if (boxRef.current) boxRef.current.scrollTop = boxRef.current.scrollHeight;
   }, [chat, busy]);
+
+  // The week is done when the work is in and the quiz is passed.
+  useEffect(() => {
+    if (submitted && quizPassed && !done && onComplete) onComplete();
+  }, [submitted, quizPassed, done, onComplete]);
 
   const system = [
     "You are " + mentor + ", the AI mentor at Lumo Hubs for the " + t.name + " track.",
@@ -194,26 +208,39 @@ function WeekCard({ t, w, locked, done, onToggle }) {
     "This week's focus: " + w.focus + ".",
     "Tools this week: " + (w.tools || []).join(", ") + ".",
     w.ai ? "How AI helps this week: " + w.ai + "." : "",
+    "This week's assignment: " + assignment,
     t.software ? "Company software in this track: " + t.software.join(", ") + "." : "",
     t.example ? "Hands on example for this track: " + t.example : "",
     "Never say you cannot see the course, syllabus, lessons or assignments. The details above are the course. Teach from them.",
-    "This is a Q and A coaching chat. When the student asks to be quizzed, ask ONE clear question about this week and stop so they can type an answer.",
-    "When the student answers, say what they got right, fix what is wrong or missing in simple words, give a score out of 10, then ask the next question.",
-    "If the student asks their own question, answer it, then offer to quiz them.",
-    "Use plain language a beginner understands. Be practical and specific. Keep each reply under 200 words. Use short paragraphs, bold for key words, and simple lists. No tables. Do not use em dashes.",
+    "This is a coaching chat. When the student asks to get started, walk them through the assignment in clear numbered steps they can do today, say what to submit at the end, then ask if they are ready for step 1.",
+    "When the student asks for practice questions, ask ONE clear question about this week and stop so they can type an answer. When they answer, say what they got right, fix what is wrong or missing, give a score out of 10, then ask the next question.",
+    "When the student submits work, review it against the assignment: what is good, what to improve, and a score out of 10.",
+    "If the student asks their own question, answer it.",
+    "Use plain language a beginner understands. Be practical and specific. Keep each reply under 220 words. Use short paragraphs, bold for key words, and simple lists. No tables. Do not use em dashes.",
     t.id === "healthcare" ? "This is for training only. Never give a medical diagnosis for a real patient. Say a licensed professional must decide." : "",
     t.sector === "trades" ? "Always include safety steps. Tell the learner when a licensed professional is needed." : "",
   ].filter(Boolean).join(" ");
 
-  async function send(kind) {
+  async function send(kind, sub) {
     const text = input.trim();
-    let api, shown, img = null;
-    if (kind === "tips") {
-      api = "Give me 3 specific things to know or do this week, 2 sentences each. End with one short motivating line.";
-      shown = "Get Week " + w.week + " tips";
-    } else if (kind === "quiz") {
-      api = "Quiz me. Ask me one question about this week.";
-      shown = "Quiz me";
+    let api, shown, img = null, blocks = null;
+    if (kind === "start") {
+      api = "Help me get started on this week's assignment. Walk me through it step by step.";
+      shown = "Get started";
+    } else if (kind === "practice") {
+      api = "Give me a practice question about this week.";
+      shown = "Practice Q and A";
+    } else if (kind === "review") {
+      const names = (sub.files || []).map((f) => f.name).join(", ");
+      api = "I submitted my assignment. Here is my work." + (sub.text ? " What I did: " + sub.text : "") + (sub.link ? " Link: " + sub.link : "") + (names ? " Files: " + names + "." : "") + " Please review it.";
+      shown = "I submitted my work. Please review it.";
+      const attach = (sub.files || []).filter((f) => f.type.startsWith("image/") || f.type === "application/pdf").slice(0, 2);
+      if (attach.length) {
+        blocks = attach.map((f) => ({
+          type: f.type === "application/pdf" ? "document" : "image",
+          source: { type: "base64", media_type: f.type, data: String(f.url).split(",")[1] },
+        }));
+      }
     } else if (photo) {
       img = photo;
       api = "Look at my photo. Tell me: 1) what you see, 2) the likely issue, 3) the steps to fix it or what to do next." + (text ? " My question: " + text : "");
@@ -224,20 +251,21 @@ function WeekCard({ t, w, locked, done, onToggle }) {
     } else {
       return;
     }
+    if (img) blocks = [{ type: "image", source: { type: "base64", media_type: img.type, data: img.data } }];
     const before = chat;
-    const next = [...chat, { role: "user", text: shown, api, img }];
+    const next = [...chat, { role: "user", text: shown, api, img, blocks }];
     setChat(next);
     if (kind === "send") setInput("");
     if (img) setPhoto(null);
     setBusy(true);
     setError("");
     const messages = next.map((m, i) => {
-      if (m.role === "user" && m.img && i === next.length - 1) {
-        return { role: "user", content: [{ type: "image", source: { type: "base64", media_type: m.img.type, data: m.img.data } }, { type: "text", text: m.api }] };
+      if (m.role === "user" && m.blocks && i === next.length - 1) {
+        return { role: "user", content: [...m.blocks, { type: "text", text: m.api }] };
       }
-      return { role: m.role, content: (m.api || m.text) + (m.img ? " (I shared a photo here.)" : "") };
+      return { role: m.role, content: (m.api || m.text) + (m.blocks ? " (I shared files here.)" : "") };
     });
-    const r = await askClaude({ system, messages, maxTokens: 900 });
+    const r = await askClaude({ system, messages, maxTokens: 1000 });
     if (r.error) {
       setError(r.error);
       setChat(before);
@@ -249,7 +277,26 @@ function WeekCard({ t, w, locked, done, onToggle }) {
     setBusy(false);
   }
 
+  function submitWork(sub) {
+    const err = update((s) => {
+      const weeks = { ...s.weeks, [key]: { ...(s.weeks[key] || {}), submission: sub } };
+      let portfolio = s.portfolio.filter((p) => p.fromWeek !== key);
+      if (sub.inPortfolio) {
+        portfolio = [{ id: newId(), fromWeek: key, title: t.name + ", Week " + w.week + ": " + w.title, text: sub.text, link: sub.link, files: sub.files, trackId: t.id, week: w.week, date: sub.date }, ...portfolio];
+      }
+      return { ...s, weeks, portfolio };
+    });
+    if (err) return err;
+    send("review", sub);
+    return null;
+  }
+
+  function saveQuiz(q) {
+    update((s) => ({ ...s, weeks: { ...s.weeks, [key]: { ...(s.weeks[key] || {}), quiz: q } } }));
+  }
+
   const waitingForAnswer = chat.length > 0 && chat[chat.length - 1].role === "assistant";
+  const stepTitle = { margin: "0 0 8px", fontSize: "1rem" };
 
   return (
     <div className="panel">
@@ -264,15 +311,29 @@ function WeekCard({ t, w, locked, done, onToggle }) {
       </button>
       {open && (
         <div style={{ marginTop: 12 }}>
-          <p>{w.focus}</p>
           <div className="small"><strong>Tools:</strong> {w.tools.join(", ")}</div>
-          <div className="small" style={{ marginTop: 4 }}><strong>How AI helps:</strong> {w.ai}</div>
           {locked ? (
-            <p className="muted small" style={{ marginTop: 12 }}>The AI mentor opens when this track launches.</p>
+            <>
+              <p style={{ marginTop: 10 }}>{w.focus}</p>
+              <p className="muted small">The assignment, mentor, and quiz open when this track launches.</p>
+            </>
           ) : (
-            <div style={{ marginTop: 14 }}>
+            <>
+              <div className="row small" style={{ marginTop: 10 }}>
+                <span className={"chip " + (submitted ? "green" : "")}>{submitted ? "✓ Work submitted" : "Work: to do"}</span>
+                <span className={"chip " + (quizPassed ? "green" : "")}>{quizPassed ? "✓ Quiz passed" : "Quiz: to do"}</span>
+              </div>
+
+              <div className="panel tint" style={{ marginTop: 12 }}>
+                <h4 style={stepTitle}>Step 1: Your assignment</h4>
+                <p style={{ margin: "0 0 10px" }}>{assignment}</p>
+                {chat.length === 0 && (
+                  <button className="btn teal" onClick={() => send("start")} disabled={busy}>{busy ? "Getting your steps..." : "Click here to get started"}</button>
+                )}
+              </div>
+
               {chat.length > 0 && (
-                <div className="ai-box" ref={boxRef} style={{ maxHeight: 420, overflowY: "auto", whiteSpace: "normal", marginBottom: 10 }}>
+                <div className="ai-box" ref={boxRef} style={{ maxHeight: 440, overflowY: "auto", whiteSpace: "normal", marginTop: 12 }}>
                   {chat.map((m, i) => (
                     <div key={i} style={{ marginBottom: 12 }}>
                       <div className="small" style={{ fontWeight: 700 }}>{m.role === "user" ? "You" : mentor}</div>
@@ -284,31 +345,44 @@ function WeekCard({ t, w, locked, done, onToggle }) {
                   <div className="ai-src">{mentor}, powered by Claude</div>
                 </div>
               )}
-              <textarea
-                className="input"
-                placeholder={waitingForAnswer ? "Type your answer, or ask a question" : "Ask " + mentor + " a question about this week"}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (!busy) send("send"); } }}
-              />
-              <div className="row" style={{ marginTop: 10 }}>
-                <button className="btn teal small" onClick={() => send("send")} disabled={busy || (!input.trim() && !photo)}>
-                  {busy ? "Thinking..." : photo ? "Check my photo" : waitingForAnswer ? "Send" : "Ask my mentor"}
-                </button>
-                <button className="btn small" onClick={() => send("quiz")} disabled={busy}>Quiz me</button>
-                <button className="btn ghost small" onClick={() => send("tips")} disabled={busy}>{"Get Week " + w.week + " tips"}</button>
-                {canPhoto(t) && (
-                  <label className="btn ghost small" style={{ cursor: "pointer" }}>
-                    {photo ? "Photo: " + photo.name : "Add a photo"}
-                    <input type="file" accept="image/*" hidden onChange={async (e) => { const f = e.target.files[0]; if (f) setPhoto(await readImage(f)); }} />
-                  </label>
-                )}
-                <button className="btn ghost small" onClick={onToggle}>{done ? "Mark not done" : "Mark week done"}</button>
-                {chat.length > 0 && <button className="btn ghost small" onClick={() => { setChat([]); setError(""); }} disabled={busy}>Clear chat</button>}
+
+              <div style={{ marginTop: 12 }}>
+                <textarea
+                  className="input"
+                  placeholder={waitingForAnswer ? "Type your answer, or ask " + mentor + " a question" : "Ask " + mentor + " a question about this week"}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (!busy) send("send"); } }}
+                />
+                <div className="row" style={{ marginTop: 10 }}>
+                  <button className="btn teal small" onClick={() => send("send")} disabled={busy || (!input.trim() && !photo)}>
+                    {busy ? "Thinking..." : photo ? "Check my photo" : waitingForAnswer ? "Send" : "Ask my mentor"}
+                  </button>
+                  <button className="btn ghost small" onClick={() => send("practice")} disabled={busy}>Practice Q and A</button>
+                  {canPhoto(t) && (
+                    <label className="btn ghost small" style={{ cursor: "pointer" }}>
+                      {photo ? "Photo: " + photo.name : "Add a photo"}
+                      <input type="file" accept="image/*" hidden onChange={async (e) => { const f = e.target.files[0]; if (f) setPhoto(await readImage(f)); }} />
+                    </label>
+                  )}
+                  {chat.length > 0 && <button className="btn ghost small" onClick={() => { setChat([]); setError(""); }} disabled={busy}>Clear chat</button>}
+                </div>
+                {photo && <img src={photo.url} alt="Your upload" style={{ maxHeight: 160, borderRadius: 8, marginTop: 10 }} />}
+                {error && <div className="err">{error}</div>}
               </div>
-              {photo && <img src={photo.url} alt="Your upload" style={{ maxHeight: 160, borderRadius: 8, marginTop: 10 }} />}
-              {error && <div className="err">{error}</div>}
-            </div>
+
+              <div className="panel" style={{ marginTop: 14 }}>
+                <h4 style={stepTitle}>Step 2: Submit your work</h4>
+                <SubmitWork key={key + (rec.submission ? rec.submission.date : "")} t={t} w={w} saved={rec.submission} onSubmit={submitWork} busy={busy} />
+              </div>
+
+              <div className="panel" style={{ marginTop: 14 }}>
+                <h4 style={stepTitle}>Step 3: Week {w.week} quiz</h4>
+                <WeekQuiz t={t} w={w} saved={rec.quiz} onSave={saveQuiz} />
+              </div>
+
+              <p className="small muted" style={{ marginTop: 10 }}>This week is marked done when you submit your work and pass the quiz.</p>
+            </>
           )}
         </div>
       )}
