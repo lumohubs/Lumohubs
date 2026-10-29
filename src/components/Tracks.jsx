@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { SECTORS, TRACKS, LIVE_TRACKS, trackById } from "../data/tracks";
 import { QUIZ } from "../data/demo";
 import { askClaude, readImage } from "../ai";
@@ -133,37 +133,129 @@ export function TrackDetail({ id, onBack, onJoinWaitlist, waitlist, progress, se
   );
 }
 
+// Turns the mentor's reply into clean text: bold, headings and lists, with no stars showing.
+function renderInline(text, keyBase) {
+  const parts = String(text).split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((p, i) =>
+    p.startsWith("**") && p.endsWith("**") && p.length > 4
+      ? <strong key={keyBase + "-" + i}>{p.slice(2, -2)}</strong>
+      : p.replace(/\*/g, "")
+  );
+}
+
+function RichText({ text }) {
+  const lines = String(text || "").replace(/\r/g, "").split("\n");
+  const out = [];
+  let list = null;
+  const flush = () => {
+    if (!list) return;
+    const k = "list-" + out.length;
+    out.push(list.ordered ? <ol key={k} style={{ margin: "6px 0", paddingInlineStart: 22 }}>{list.items}</ol> : <ul key={k} style={{ margin: "6px 0", paddingInlineStart: 22 }}>{list.items}</ul>);
+    list = null;
+  };
+  lines.forEach((raw, i) => {
+    const line = raw.trim();
+    if (!line || /^[-*_]{3,}$/.test(line)) { flush(); return; }
+    const h = line.match(/^#{1,6}\s+(.*)$/);
+    if (h) { flush(); out.push(<div key={i} style={{ fontWeight: 700, marginTop: 10 }}>{renderInline(h[1], i)}</div>); return; }
+    const b = line.match(/^[-*•]\s+(.*)$/);
+    const n = line.match(/^\d+[.)]\s+(.*)$/);
+    if (b || n) {
+      const ordered = !!n;
+      if (!list || list.ordered !== ordered) { flush(); list = { ordered, items: [] }; }
+      list.items.push(<li key={i}>{renderInline((b || n)[1], i)}</li>);
+      return;
+    }
+    flush();
+    out.push(<p key={i} style={{ margin: "6px 0" }}>{renderInline(line, i)}</p>);
+  });
+  flush();
+  return <div>{out}</div>;
+}
+
 function WeekCard({ t, w, locked, done, onToggle }) {
   const [open, setOpen] = useState(w.week === 1);
   const [busy, setBusy] = useState(false);
-  const [answer, setAnswer] = useState("");
+  const [chat, setChat] = useState([]);
   const [error, setError] = useState("");
   const [photo, setPhoto] = useState(null);
-  const [question, setQuestion] = useState("");
+  const [input, setInput] = useState("");
+  const boxRef = useRef(null);
   const starter = w.week <= 2;
+  const mentor = t.agent || "AI Mentor";
 
-  async function ask() {
-    setBusy(true); setAnswer(""); setError("");
-    const role = t.agent || "an AI mentor";
-    const system = `You are ${role}, an AI mentor at Lumo Hubs for the ${t.name} track. Use plain language a beginner understands. Be practical and specific. Keep answers under 220 words. No dashes. ${t.id === "healthcare" ? "This is for training only. Never give a medical diagnosis for a real patient. Say a licensed professional must decide." : ""} ${t.sector === "trades" ? "Always include safety steps. Tell the learner when a licensed professional is needed." : ""}`;
-    let prompt;
-    if (photo) {
-      prompt = `I'm in Week ${w.week}: ${w.title}. Focus: ${w.focus}. Look at my photo. Tell me: 1) what you see, 2) the likely issue, 3) the steps to fix it or what to do next. ${question ? "My question: " + question : ""}`;
+  useEffect(() => {
+    if (boxRef.current) boxRef.current.scrollTop = boxRef.current.scrollHeight;
+  }, [chat, busy]);
+
+  const system = [
+    "You are " + mentor + ", the AI mentor at Lumo Hubs for the " + t.name + " track.",
+    "You know this course well. The student is in Week " + w.week + " of 6: \"" + w.title + "\".",
+    "This week's focus: " + w.focus + ".",
+    "Tools this week: " + (w.tools || []).join(", ") + ".",
+    w.ai ? "How AI helps this week: " + w.ai + "." : "",
+    t.software ? "Company software in this track: " + t.software.join(", ") + "." : "",
+    t.example ? "Hands on example for this track: " + t.example : "",
+    "Never say you cannot see the course, syllabus, lessons or assignments. The details above are the course. Teach from them.",
+    "This is a Q and A coaching chat. When the student asks to be quizzed, ask ONE clear question about this week and stop so they can type an answer.",
+    "When the student answers, say what they got right, fix what is wrong or missing in simple words, give a score out of 10, then ask the next question.",
+    "If the student asks their own question, answer it, then offer to quiz them.",
+    "Use plain language a beginner understands. Be practical and specific. Keep each reply under 200 words. Use short paragraphs, bold for key words, and simple lists. No tables. Do not use em dashes.",
+    t.id === "healthcare" ? "This is for training only. Never give a medical diagnosis for a real patient. Say a licensed professional must decide." : "",
+    t.sector === "trades" ? "Always include safety steps. Tell the learner when a licensed professional is needed." : "",
+  ].filter(Boolean).join(" ");
+
+  async function send(kind) {
+    const text = input.trim();
+    let api, shown, img = null;
+    if (kind === "tips") {
+      api = "Give me 3 specific things to know or do this week, 2 sentences each. End with one short motivating line.";
+      shown = "Get Week " + w.week + " tips";
+    } else if (kind === "quiz") {
+      api = "Quiz me. Ask me one question about this week.";
+      shown = "Quiz me";
+    } else if (photo) {
+      img = photo;
+      api = "Look at my photo. Tell me: 1) what you see, 2) the likely issue, 3) the steps to fix it or what to do next." + (text ? " My question: " + text : "");
+      shown = text || "Check my photo";
+    } else if (text) {
+      api = text;
+      shown = text;
     } else {
-      prompt = question
-        ? `I'm in Week ${w.week}: ${w.title} (${w.focus}). My question: ${question}`
-        : `I'm in Week ${w.week}: ${w.title}. Focus: ${w.focus}. Give me 3 specific things to know or do this week, 2 sentences each. End with one short motivating line.`;
+      return;
     }
-    const r = await askClaude({ system, prompt, image: photo });
-    if (r.error) setError(r.error); else setAnswer(r.text);
+    const before = chat;
+    const next = [...chat, { role: "user", text: shown, api, img }];
+    setChat(next);
+    if (kind === "send") setInput("");
+    if (img) setPhoto(null);
+    setBusy(true);
+    setError("");
+    const messages = next.map((m, i) => {
+      if (m.role === "user" && m.img && i === next.length - 1) {
+        return { role: "user", content: [{ type: "image", source: { type: "base64", media_type: m.img.type, data: m.img.data } }, { type: "text", text: m.api }] };
+      }
+      return { role: m.role, content: (m.api || m.text) + (m.img ? " (I shared a photo here.)" : "") };
+    });
+    const r = await askClaude({ system, messages, maxTokens: 900 });
+    if (r.error) {
+      setError(r.error);
+      setChat(before);
+      if (kind === "send") setInput(text);
+      if (img) setPhoto(img);
+    } else {
+      setChat([...next, { role: "assistant", text: r.text }]);
+    }
     setBusy(false);
   }
+
+  const waitingForAnswer = chat.length > 0 && chat[chat.length - 1].role === "assistant";
 
   return (
     <div className="panel">
       <button className="row between" style={{ width: "100%", border: 0, background: "none", padding: 0, textAlign: "start" }} onClick={() => setOpen(!open)} aria-expanded={open}>
         <div className="row">
-          <span className="chip">{`Week ${w.week}`}</span>
+          <span className="chip">{"Week " + w.week}</span>
           <strong>{w.title}</strong>
           {starter && !locked && <span className="chip green">Free starter</span>}
           {done && <span className="chip teal">Done</span>}
@@ -179,24 +271,43 @@ function WeekCard({ t, w, locked, done, onToggle }) {
             <p className="muted small" style={{ marginTop: 12 }}>The AI mentor opens when this track launches.</p>
           ) : (
             <div style={{ marginTop: 14 }}>
-              <textarea className="input" placeholder={`Ask ${t.agent || "your AI mentor"} a question about this week (optional)`} value={question} onChange={(e) => setQuestion(e.target.value)} />
+              {chat.length > 0 && (
+                <div className="ai-box" ref={boxRef} style={{ maxHeight: 420, overflowY: "auto", whiteSpace: "normal", marginBottom: 10 }}>
+                  {chat.map((m, i) => (
+                    <div key={i} style={{ marginBottom: 12 }}>
+                      <div className="small" style={{ fontWeight: 700 }}>{m.role === "user" ? "You" : mentor}</div>
+                      {m.img && <img src={m.img.url} alt="Your upload" style={{ maxHeight: 120, borderRadius: 8, marginTop: 4 }} />}
+                      {m.role === "user" ? <p style={{ margin: "4px 0", whiteSpace: "pre-wrap" }}>{m.text}</p> : <RichText text={m.text} />}
+                    </div>
+                  ))}
+                  {busy && <div className="muted small">{mentor} is thinking...</div>}
+                  <div className="ai-src">{mentor}, powered by Claude</div>
+                </div>
+              )}
+              <textarea
+                className="input"
+                placeholder={waitingForAnswer ? "Type your answer, or ask a question" : "Ask " + mentor + " a question about this week"}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (!busy) send("send"); } }}
+              />
               <div className="row" style={{ marginTop: 10 }}>
+                <button className="btn teal small" onClick={() => send("send")} disabled={busy || (!input.trim() && !photo)}>
+                  {busy ? "Thinking..." : photo ? "Check my photo" : waitingForAnswer ? "Send" : "Ask my mentor"}
+                </button>
+                <button className="btn small" onClick={() => send("quiz")} disabled={busy}>Quiz me</button>
+                <button className="btn ghost small" onClick={() => send("tips")} disabled={busy}>{"Get Week " + w.week + " tips"}</button>
                 {canPhoto(t) && (
                   <label className="btn ghost small" style={{ cursor: "pointer" }}>
-                    {photo ? `Photo: ${photo.name}` : "Add a photo"}
+                    {photo ? "Photo: " + photo.name : "Add a photo"}
                     <input type="file" accept="image/*" hidden onChange={async (e) => { const f = e.target.files[0]; if (f) setPhoto(await readImage(f)); }} />
                   </label>
                 )}
-                <button className="btn teal small" onClick={ask} disabled={busy}>
-                  {busy ? "Thinking..." : photo ? "Check my photo" : question ? "Ask my mentor" : `Get Week ${w.week} tips`}
-                </button>
                 <button className="btn ghost small" onClick={onToggle}>{done ? "Mark not done" : "Mark week done"}</button>
+                {chat.length > 0 && <button className="btn ghost small" onClick={() => { setChat([]); setError(""); }} disabled={busy}>Clear chat</button>}
               </div>
               {photo && <img src={photo.url} alt="Your upload" style={{ maxHeight: 160, borderRadius: 8, marginTop: 10 }} />}
               {error && <div className="err">{error}</div>}
-              {answer && (
-                <div className="ai-box">{answer}<div className="ai-src">{t.agent || "AI Mentor"}, powered by Claude</div></div>
-              )}
             </div>
           )}
         </div>
