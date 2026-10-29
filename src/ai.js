@@ -1,12 +1,17 @@
-export async function askClaude({ system, prompt, image, maxTokens = 900 }) {
-  const content = image
-    ? [{ type: "image", source: { type: "base64", media_type: image.type, data: image.data } }, { type: "text", text: prompt }]
-    : prompt;
+export async function askClaude({ system, prompt, image, messages, maxTokens = 900 }) {
+  // Send a full chat (messages) for Q and A, or a single prompt (with an optional photo).
+  let msgs = messages;
+  if (!Array.isArray(msgs) || msgs.length === 0) {
+    const content = image
+      ? [{ type: "image", source: { type: "base64", media_type: image.type, data: image.data } }, { type: "text", text: prompt }]
+      : prompt;
+    msgs = [{ role: "user", content }];
+  }
   try {
     const r = await fetch("/api/claude", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ system, max_tokens: maxTokens, messages: [{ role: "user", content }] }),
+      body: JSON.stringify({ system, max_tokens: maxTokens, messages: msgs }),
     });
     const data = await r.json().catch(() => ({}));
     if (!r.ok) return { error: data.error || "The AI mentor is not available right now." };
