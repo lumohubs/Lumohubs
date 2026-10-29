@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { EMPLOYERS, JOBS, LEARNERS, PROJECTS } from "../data/demo";
 import { trackById } from "../data/tracks";
 import { askClaude } from "../ai";
+import { MyPortfolio } from "./Work";
 
 export const employerById = (id) => EMPLOYERS.find((e) => e.id === id);
 
@@ -226,7 +227,9 @@ export function Profile({ me, progress }) {
         </div>
       </div>
 
-      <h3>Portfolio</h3>
+      <MyPortfolio defaultTrack={me.track} />
+
+      <h3>Sample projects</h3>
       <div className="grid g3">
         {me.projects.length ? me.projects.map((p) => (
           <div key={p} className="panel tint"><strong>{p}</strong><div className="small muted" style={{ marginTop: 6 }}>{track.name} project</div></div>
