@@ -30,23 +30,52 @@ function toOpenMessages(system, messages) {
   return out;
 }
 
-async function askSmallModel({ system, messages, max_tokens, oidc }) {
-  const token = process.env.AI_GATEWAY_API_KEY || oidc || process.env.VERCEL_OIDC_TOKEN;
-  if (!token) throw { status: 500, msg: "The AI gateway is not set up. Turn on AI Gateway for this Vercel project." };
+// Small open models only (10B or fewer). Each model has its own rate limit on the gateway,
+// so when one is busy we move to the next. Only Ministral 8B reads photos.
+const MAIN = process.env.SMALL_MODEL || "mistral/ministral-8b";
+const BACKUPS = ["meta/llama-3.1-8b", "nvidia/nemotron-nano-9b-v2"];
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const hasImage = (messages) => messages.some((m) => Array.isArray(m.content) && m.content.some((b) => b.type === "image"));
+
+async function callModel(model, { system, messages, max_tokens, token }) {
   const r = await fetch(GATEWAY_URL, {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
-    body: JSON.stringify({
-      model: process.env.SMALL_MODEL || "mistral/ministral-8b",
-      max_tokens,
-      temperature: 0.4,
-      messages: toOpenMessages(system, messages),
-    }),
+    body: JSON.stringify({ model, max_tokens, temperature: 0.4, messages: toOpenMessages(system, messages) }),
   });
   const data = await r.json().catch(() => ({}));
-  if (!r.ok) throw { status: r.status, msg: data?.error?.message || "The AI service returned an error." };
+  if (!r.ok) {
+    const msg = data?.error?.message || "The AI service returned an error.";
+    const wait = Number((msg.match(/after (\d+)s/i) || [])[1]) || 0;
+    throw { status: r.status, msg, busy: r.status === 429, wait };
+  }
   const choice = data.choices?.[0] || {};
-  return { text: choice.message?.content || "", truncated: choice.finish_reason === "length" };
+  return { text: choice.message?.content || "", truncated: choice.finish_reason === "length", model };
+}
+
+async function askSmallModel({ system, messages, max_tokens, oidc, prefer }) {
+  const token = process.env.AI_GATEWAY_API_KEY || oidc || process.env.VERCEL_OIDC_TOKEN;
+  if (!token) throw { status: 500, msg: "The AI gateway is not set up. Turn on AI Gateway for this Vercel project." };
+  const args = { system, messages, max_tokens, token };
+  // Photos need Ministral. "check" asks a different model first, for a real second opinion.
+  let order = hasImage(messages) ? [MAIN] : prefer === "check" ? [...BACKUPS, MAIN] : [MAIN, ...BACKUPS];
+  let lastErr = null;
+  for (let round = 0; round < 2; round++) {
+    let minWait = 60;
+    for (const model of order) {
+      try {
+        return await callModel(model, args);
+      } catch (e) {
+        lastErr = e;
+        if (!e.busy && e.status !== 404 && e.status !== 400) throw e;
+        if (e.busy) minWait = Math.min(minWait, e.wait || 8);
+      }
+    }
+    // Every model was busy. Wait a moment (up to 9 seconds) and try once more.
+    if (round === 0 && lastErr && lastErr.busy) await sleep(Math.min(minWait, 9) * 1000);
+  }
+  if (lastErr && lastErr.busy) throw { status: 429, msg: "Lots of people are learning right now. Wait one minute and try again." };
+  throw lastErr || { status: 500, msg: "The AI service returned an error." };
 }
 
 async function askClaude({ system, messages, max_tokens }) {
@@ -65,7 +94,7 @@ async function askClaude({ system, messages, max_tokens }) {
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Use POST" });
-  const { system, messages, max_tokens } = req.body || {};
+  const { system, messages, max_tokens, prefer } = req.body || {};
   if (!Array.isArray(messages) || messages.length === 0) return res.status(400).json({ error: "No message sent." });
   const args = {
     system: system || "You are a helpful mentor at Lumo Hubs. Use plain language.",
@@ -73,6 +102,7 @@ export default async function handler(req, res) {
     max_tokens: Math.min(Math.max(Number(max_tokens) || 1500, 1500), 2000),
     // Vercel passes the project's OIDC token on each request in this header.
     oidc: req.headers["x-vercel-oidc-token"],
+    prefer,
   };
   try {
     const result = process.env.AI_PROVIDER === "claude" ? await askClaude(args) : await askSmallModel(args);
