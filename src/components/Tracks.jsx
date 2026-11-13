@@ -4,7 +4,7 @@ import { QUIZ } from "../data/demo";
 import { askClaude, readImage } from "../ai";
 import { getLearner, saveLearner } from "../learner";
 import { isVocational, isMedical } from "../data/tracks";
-import { useWork, weekKey, newId, assignmentFor, SubmitWork, WeekQuiz } from "./Work";
+import { useWork, weekKey, newId, assignmentFor, SubmitWork, WeekQuiz, WrittenCheck } from "./Work";
 import { Markdown } from "./Markdown";
 import { Icon, IconBadge } from "./Icons";
 
@@ -167,6 +167,7 @@ function WeekCard({ t, w, level, locked, done, onComplete }) {
   const assignment = assignmentFor(t, w);
   const submitted = !!rec.submission;
   const quizPassed = !!(rec.quiz && rec.quiz.passed);
+  const writtenPassed = !!(rec.written && rec.written.passed);
 
   useEffect(() => {
     if (boxRef.current) boxRef.current.scrollTop = boxRef.current.scrollHeight;
@@ -174,8 +175,8 @@ function WeekCard({ t, w, level, locked, done, onComplete }) {
 
   // The week is done when the work is in and the quiz is passed.
   useEffect(() => {
-    if (submitted && quizPassed && !done && onComplete) onComplete();
-  }, [submitted, quizPassed, done, onComplete]);
+    if (submitted && quizPassed && writtenPassed && !done && onComplete) onComplete();
+  }, [submitted, quizPassed, writtenPassed, done, onComplete]);
 
   // Sent with every mentor request so the AI always knows where the student is.
   const levelName = level === "advanced" ? "Advanced (employer paid)" : "Foundation (free)";
@@ -272,6 +273,10 @@ function WeekCard({ t, w, level, locked, done, onComplete }) {
     return null;
   }
 
+  function saveWritten(x) {
+    update((s) => ({ ...s, weeks: { ...s.weeks, [key]: { ...(s.weeks[key] || {}), written: x } } }));
+  }
+
   function saveQuiz(q) {
     update((s) => ({ ...s, weeks: { ...s.weeks, [key]: { ...(s.weeks[key] || {}), quiz: q } } }));
   }
@@ -303,6 +308,7 @@ function WeekCard({ t, w, level, locked, done, onComplete }) {
               <div className="row small" style={{ marginTop: 10 }}>
                 <span className={"chip " + (submitted ? "green" : "")}>{submitted ? <><Icon name="Check" size={14} /> Work submitted</> : "Work: to do"}</span>
                 <span className={"chip " + (quizPassed ? "green" : "")}>{quizPassed ? <><Icon name="Check" size={14} /> Quiz passed</> : "Quiz: to do"}</span>
+                <span className={"chip " + (writtenPassed ? "green" : "")}>{writtenPassed ? <><Icon name="Check" size={14} /> Written check passed</> : "Written check: to do"}</span>
               </div>
 
               <div className="panel tint" style={{ marginTop: 12 }}>
@@ -362,7 +368,12 @@ function WeekCard({ t, w, level, locked, done, onComplete }) {
                 <WeekQuiz t={t} w={w} saved={rec.quiz} onSave={saveQuiz} />
               </div>
 
-              <p className="small muted" style={{ marginTop: 10 }}>This week is marked done when you submit your work and pass the quiz.</p>
+              <div className="panel" style={{ marginTop: 14 }}>
+                <h4 style={stepTitle}>Step 4: Written check</h4>
+                <WrittenCheck key={key + "-written"} t={t} w={w} saved={rec.written} onSave={saveWritten} />
+              </div>
+
+              <p className="small muted" style={{ marginTop: 10 }}>This week is marked done when you submit your work, pass the quiz, and pass the written check.</p>
             </>
           )}
         </div>

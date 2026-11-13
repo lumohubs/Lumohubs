@@ -13,17 +13,19 @@ function weekRows(l, t) {
   const done = (l.progress || {})[t.id] || [];
   return t.weeks.map((w) => {
     const rec = (l.weeks || {})[t.id + ":" + w.week] || {};
-    return { w, done: done.includes(w.week), sub: rec.submission, quiz: rec.quiz, review: rec.review };
+    return { w, done: done.includes(w.week), sub: rec.submission, quiz: rec.quiz, review: rec.review, written: rec.written };
   });
 }
 
 // Things an instructor should look at first.
 function flags(rows) {
   const out = [];
-  rows.forEach(({ w, done, sub, quiz }) => {
+  rows.forEach(({ w, done, sub, quiz, written }) => {
     if (!sub && (done || quiz)) out.push(`Week ${w.week}: no written work`);
     if (sub && String(sub.text || "").trim().split(/\s+/).length < 25) out.push(`Week ${w.week}: written work is very short`);
     if (quiz && !quiz.passed) out.push(`Week ${w.week}: quiz not passed (${quiz.score} of ${quiz.total})`);
+    if (written && !written.passed) out.push(`Week ${w.week}: written check not passed (${written.avg} of 10)`);
+    if (written && written.grades && written.grades.some((g) => g.score < 5)) out.push(`Week ${w.week}: a written answer scored under 5`);
     if (quiz && quiz.tries > 2) out.push(`Week ${w.week}: took the quiz ${quiz.tries} times`);
   });
   return out;
@@ -42,7 +44,7 @@ function TrackReport({ l, t }) {
           <ul style={{ margin: "4px 0 0", paddingInlineStart: 18 }}>{f.map((x) => <li key={x}>{x}</li>)}</ul>
         </div>
       )}
-      {rows.map(({ w, done, sub, quiz, review }) => (
+      {rows.map(({ w, done, sub, quiz, review, written }) => (
         <div key={w.week} className="panel" style={{ marginBottom: 8, breakInside: "avoid" }}>
           <div className="row between" style={{ flexWrap: "wrap", gap: 6 }}>
             <strong>Week {w.week}: {w.title}</strong>
@@ -65,6 +67,21 @@ function TrackReport({ l, t }) {
               <div className="small" style={{ marginTop: 4 }}><Markdown text={review.text} /></div>
             </details>
           )}
+          <div style={{ marginTop: 8 }}>
+            <div className="small" style={{ fontWeight: 600 }}>Written check (in their own words)</div>
+            {written ? (
+              <div>
+                <div className="small">{written.passed ? "Passed" : "Not passed"}: {written.avg} of 10 average{written.tries ? `, ${written.tries} ${written.tries === 1 ? "try" : "tries"}` : ""}</div>
+                {(written.questions || []).map((q, i) => (
+                  <div key={i} style={{ marginTop: 6 }}>
+                    <div className="small" style={{ fontWeight: 600 }}>{i + 1}. {q}</div>
+                    <div style={{ whiteSpace: "pre-wrap" }}>{(written.answers || [])[i]}</div>
+                    {written.grades && written.grades[i] && <div className="small muted">AI grade: {written.grades[i].score} of 10. {written.grades[i].feedback}</div>}
+                  </div>
+                ))}
+              </div>
+            ) : <div className="small muted">Not taken yet.</div>}
+          </div>
           <div style={{ marginTop: 8 }}>
             <div className="small" style={{ fontWeight: 600 }}>Quiz</div>
             {quiz ? (
