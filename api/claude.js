@@ -30,8 +30,8 @@ function toOpenMessages(system, messages) {
   return out;
 }
 
-async function askSmallModel({ system, messages, max_tokens }) {
-  const token = process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN;
+async function askSmallModel({ system, messages, max_tokens, oidc }) {
+  const token = process.env.AI_GATEWAY_API_KEY || oidc || process.env.VERCEL_OIDC_TOKEN;
   if (!token) throw { status: 500, msg: "The AI gateway is not set up. Turn on AI Gateway for this Vercel project." };
   const r = await fetch(GATEWAY_URL, {
     method: "POST",
@@ -71,6 +71,8 @@ export default async function handler(req, res) {
     system: system || "You are a helpful mentor at Lumo Hubs. Use plain language.",
     messages,
     max_tokens: Math.min(Math.max(Number(max_tokens) || 1500, 1500), 2000),
+    // Vercel passes the project's OIDC token on each request in this header.
+    oidc: req.headers["x-vercel-oidc-token"],
   };
   try {
     const result = process.env.AI_PROVIDER === "claude" ? await askClaude(args) : await askSmallModel(args);
