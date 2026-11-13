@@ -106,7 +106,7 @@ const META = {
   "media-youtube": { sector: "creative", software: ["YouTube Studio", "CapCut", "Adobe Premiere"], example: "Shoot, edit, and publish a 60 second explainer from the hub studio." },
   "freelance-design": { sector: "creative", software: ["Canva", "Figma", "Adobe Illustrator"], example: "Design a logo and social kit for a real hub business." },
   "freelance-marketing": { sector: "creative", software: ["Meta Business Suite", "Google Analytics", "HubSpot"], example: "Plan and run a one week campaign, then report the results." },
-  "business-systems": { sector: "business", software: ["Salesforce", "Monday.com", "HubSpot"], example: "Set up a sales pipeline in HubSpot for a sample company." },
+  "business-systems": { sector: "business", software: ["Salesforce", "Monday.com", "Asana", "HubSpot", "Slack", "Google Workspace", "Excel", "Notion", "Microsoft Copilot"], example: "Set up a sales pipeline in HubSpot for a sample company." },
   "data-analytics": { sector: "business", software: ["Excel", "Power BI", "Tableau", "Python"], example: "Clean a messy sales sheet, ask AI for trends, and build a dashboard." },
   "ai-hr": { sector: "business", software: ["SAP SuccessFactors", "Workday", "LinkedIn Recruiter"], example: "Write a fair job post, screen 10 sample resumes, and check for bias." },
   "ai-pm": { sector: "business", software: ["Microsoft Project", "Jira", "Asana", "Monday.com"], example: "Plan a 3 month office move. AI builds the timeline and flags risks." },
