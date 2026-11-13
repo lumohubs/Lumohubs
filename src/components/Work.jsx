@@ -270,42 +270,66 @@ const words = (x) => String(x || "").trim().split(/\s+/).filter(Boolean).length;
 const isTrades = (t) => t.sector === "trades";
 const isMed = (t) => /health|medical|radiolog|nurs/i.test(t.id + " " + t.name);
 
+const WRITTEN_SIZE = 10;
+
 function backupQuestions(t, w) {
-  const tool = (w.tools || []).find((x) => !/AI|app$/i.test(x)) || (w.tools || [])[0] || "the main tool";
-  return [
+  const tools = (w.tools || []).filter((x) => !/AI|app$/i.test(x));
+  const tool = tools[0] || (w.tools || [])[0] || "the main tool";
+  const tool2 = tools[1] || tool;
+  const base = [
     `In your own words, explain the most important things you learned in Week ${w.week}: ${w.title}.`,
-    isTrades(t)
-      ? `Name the tools you would use for this week's work (${w.title}) and say what each one is for.`
-      : `List the exact steps you would take to do a real task in ${tool} this week. Say what you click and what you type.`,
-    isTrades(t) || isMed(t)
-      ? `What safety steps do you follow for this week's work, and why does each one matter?`
-      : `Describe a real work problem where you would use what you learned this week, and how you would solve it step by step.`,
+    `Explain this week's topic to a friend who has never heard of it: ${w.focus}`,
+    `Describe a real work problem where you would use what you learned this week, and how you would solve it step by step.`,
+    `What is one common mistake people make with this week's work, and how do you avoid it?`,
+    `How would you check that your work this week was done right? List what you would check.`,
+    `What questions would you ask a boss or customer before starting this week's kind of job, and why?`,
   ];
+  const special = isTrades(t)
+    ? [`Name the tools you would use for this week's work (${w.title}) and say what each one is for.`,
+       `What safety steps do you follow for this week's work, and why does each one matter?`,
+       `Walk through a real job from this week from start to finish. List each step in order.`,
+       `When should you stop and call a licensed professional for this kind of work? Explain why.`]
+    : isMed(t)
+      ? [`List the steps of a real procedure from this week, in the right order.`,
+         `What do you do to keep the patient safe during this week's work? Explain each step.`,
+         `Explain two key medical words from this week in plain words.`,
+         `When must you stop and get a licensed professional? Explain why.`]
+      : [`List the exact steps you would take to do a real task in ${tool}. Say what you click and what you type.`,
+         `How would you find or pull a specific set of data in ${tool2}? List each step.`,
+         `Something is not working in ${tool}. How would you find and fix the problem? List your steps.`,
+         `How would you share your work in ${tool} with your team or manager? List each step.`];
+  return [...special, ...base].slice(0, WRITTEN_SIZE);
 }
 
 export function WrittenCheck({ t, w, saved, onSave }) {
-  const [qs, setQs] = useState(null);
-  const [ans, setAns] = useState({});
+  // Answers save on this device as the student types, so a refresh does not lose their work.
+  const draftKey = "lh-written-draft:" + weekKey(t, w);
+  const draft = (() => { try { return JSON.parse(localStorage.getItem(draftKey) || "null"); } catch { return null; } })();
+  const [qs, setQsState] = useState(draft && Array.isArray(draft.qs) ? draft.qs : null);
+  const [ans, setAnsState] = useState(draft && draft.ans ? draft.ans : {});
+  const keep = (q, a) => { try { localStorage.setItem(draftKey, JSON.stringify({ qs: q, ans: a })); } catch {} };
+  const setQs = (q) => { setQsState(q); keep(q, {}); };
+  const setAns = (a) => { setAnsState(a); keep(qs, a); };
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
   const [note, setNote] = useState("");
 
   async function load() {
-    setBusy("load"); setError(""); setResult(null); setAns({});
+    setBusy("load"); setError(""); setResult(null); setAnsState({});
     const rules = [
-      "Write 3 short answer questions that a student must answer in their own words, in 3 to 6 sentences each. No multiple choice.",
+      "Write 10 short answer questions that a student must answer in their own words, in 3 to 6 sentences each. No multiple choice. Each question must be different.",
       `Course: Lumo Hubs ${t.name}, Week ${w.week}: ${w.title}. Topic: ${w.focus} Tools: ${(w.tools || []).join(", ")}.`,
       isTrades(t)
-        ? "One question must ask the student to name the specific tools for a real job from this week and say what each tool is for. One must ask about safety steps."
+        ? "At least 3 questions ask the student to name the specific tools for a real job and say what each tool is for. At least 2 ask about safety steps. At least 2 ask for the steps of a real job in order."
         : isMed(t)
-          ? "One question must ask for the steps of a real procedure from this week in order. One must ask about patient safety."
-          : "One question must ask for the exact steps to do a real task in one of this week's software tools, for example how to build a report that pulls certain data, saying what to click and what to enter.",
-      "The other question asks them to explain a key idea from this week and how they would use it at work.",
+          ? "At least 3 questions ask for the steps of a real procedure in order. At least 3 ask about patient safety. At least 2 ask them to explain medical words in plain words."
+          : "At least 4 questions ask for the exact steps to do a real task in this week's software tools, for example how to build a report that pulls certain data, saying what to click and what to enter. At least 2 ask how to fix a problem in the tool.",
+      "The rest ask them to explain key ideas from this week and how they would use them at work.",
       "Questions must test real understanding, not memorized words. Use plain words. Do not use em dashes.",
-      'Reply ONLY with JSON: {"questions":["q1","q2","q3"]}',
+      'Reply ONLY with JSON: {"questions":["question 1","question 2", ... ten in all]}',
     ].join(" ");
-    const r = await askClaude({ system: "You write fair, hard, practical training questions. Reply with JSON only.", prompt: rules, maxTokens: 700 });
+    const r = await askClaude({ system: "You write fair, hard, practical training questions. Reply with JSON only.", prompt: rules, maxTokens: 1500 });
     let list = null;
     if (!r.error) {
       try {
@@ -315,35 +339,45 @@ export function WrittenCheck({ t, w, saved, onSave }) {
         list = (j.questions || [])
           .map((x) => (typeof x === "string" ? x : Object.values(x || {}).find((v) => typeof v === "string") || ""))
           .map((x) => x.replace(/\*+/g, "").replace(/\s*[\u2014\u2013]\s*/g, ", ").trim())
-          .filter((x) => x.length > 10)
-          .slice(0, 3);
+          .filter((x, i, arr) => x.length > 10 && arr.indexOf(x) === i)
+          .slice(0, WRITTEN_SIZE);
       } catch { list = null; }
     }
-    if (!list || list.length < 3) list = backupQuestions(t, w);
+    // Fill any missing spots with built in questions so there are always 10.
+    if (!list) list = [];
+    if (list.length < WRITTEN_SIZE) list = list.concat(backupQuestions(t, w).filter((q) => !list.includes(q))).slice(0, WRITTEN_SIZE);
     setQs(list);
     setBusy("");
   }
 
   async function grade() {
     setBusy("grade"); setError("");
-    const items = qs.map((q, i) => `Question ${i + 1}: ${q}\nStudent answer ${i + 1}: ${ans[i]}`).join("\n\n");
-    const prompt = [
-      `Grade these written answers for Lumo Hubs ${t.name}, Week ${w.week}: ${w.title}. Topic: ${w.focus} Tools: ${(w.tools || []).join(", ")}.`,
-      "Be strict and fair. Score each answer 0 to 10. 9 to 10: correct, specific, and complete, with real steps, tool names, or facts. 7 to 8: correct with small gaps. 5 to 6: partly right or too general. 0 to 4: wrong, vague, off topic, or copied filler.",
-      "Wrong facts, wrong steps, or wrong tool names lose points. Do not reward length alone.",
-      "For each answer give one or two short sentences of feedback that say what was right and what was missing. Plain words. No em dashes.",
-      'Reply ONLY with JSON: {"grades":[{"score":0,"feedback":"..."},{"score":0,"feedback":"..."},{"score":0,"feedback":"..."}]}',
-      "\n\n" + items,
-    ].join(" ");
-    const r = await askClaude({ system: "You are a strict, fair instructor who grades written answers. Reply with JSON only.", prompt, maxTokens: 900 });
-    let grades = null;
-    if (!r.error) {
+    // Grade in 2 groups of 5 at the same time, so each reply is short and reliable.
+    const gradeGroup = async (idx) => {
+      const items = idx.map((i, n) => `Question ${n + 1}: ${qs[i]}\nStudent answer ${n + 1}: ${ans[i]}`).join("\n\n");
+      const prompt = [
+        `Grade these written answers for Lumo Hubs ${t.name}, Week ${w.week}: ${w.title}. Topic: ${w.focus} Tools: ${(w.tools || []).join(", ")}.`,
+        "Be strict and fair. Score each answer 0 to 10. 9 to 10: correct, specific, and complete, with real steps, tool names, or facts. 7 to 8: correct with small gaps. 5 to 6: partly right or too general. 0 to 4: wrong, vague, off topic, or copied filler.",
+        "Wrong facts, wrong steps, or wrong tool names lose points. Do not reward length alone. If an answer repeats another answer or does not answer its own question, score it 0 to 3.",
+        "For each answer give one or two short sentences of feedback that say what was right and what was missing. Plain words. No em dashes.",
+        `Reply ONLY with JSON with exactly ${idx.length} grades in order: {"grades":[{"score":0,"feedback":"..."}]}`,
+        "\n\n" + items,
+      ].join(" ");
+      const r = await askClaude({ system: "You are a strict, fair instructor who grades written answers. Reply with JSON only.", prompt, maxTokens: 1200 });
+      if (r.error) return { error: r.error };
       try {
         const raw = String(r.text || "");
         const j = JSON.parse(raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1));
-        grades = (j.grades || []).slice(0, qs.length).map((g) => ({ score: Math.max(0, Math.min(10, Math.round(Number(g.score) || 0))), feedback: String(g.feedback || "").replace(/\s*[\u2014\u2013]\s*/g, ", ") }));
-      } catch { grades = null; }
-    }
+        const g = (j.grades || []).slice(0, idx.length).map((x) => ({ score: Math.max(0, Math.min(10, Math.round(Number(x.score) || 0))), feedback: String(x.feedback || "").replace(/\s*[\u2014\u2013]\s*/g, ", ") }));
+        return g.length === idx.length ? { grades: g } : { error: "" };
+      } catch { return { error: "" }; }
+    };
+    const half = Math.ceil(qs.length / 2);
+    const groups = [qs.map((_, i) => i).slice(0, half), qs.map((_, i) => i).slice(half)].filter((x) => x.length);
+    const parts = await Promise.all(groups.map(gradeGroup));
+    const bad = parts.find((p) => !p.grades);
+    const grades = bad ? null : parts.flatMap((p) => p.grades);
+    const r = { error: bad ? bad.error : "" };
     setBusy("");
     if (!grades || grades.length < qs.length) { setError(r.error || "Grading did not work. Press the button again."); return; }
     const avg = Math.round((grades.reduce((n, g) => n + g.score, 0) / grades.length) * 10) / 10;
@@ -351,6 +385,7 @@ export function WrittenCheck({ t, w, saved, onSave }) {
     const tries = ((saved && saved.tries) || 0) + 1;
     const res = { questions: qs, answers: qs.map((_, i) => ans[i]), grades, avg, passed, tries, date: new Date().toISOString() };
     setResult(res);
+    try { localStorage.removeItem(draftKey); } catch {}
     // Keep a passed check. Otherwise keep the latest try.
     onSave(saved && saved.passed && !passed ? { ...saved, tries, lastTry: res } : res);
   }
@@ -361,7 +396,7 @@ export function WrittenCheck({ t, w, saved, onSave }) {
     return (
       <div>
         {saved && <div style={{ marginBottom: 8 }}><span className={"chip " + (saved.passed ? "green" : "")}>{saved.passed ? "Passed" : "Not passed yet"}: {saved.avg} of 10 average</span></div>}
-        <p className="small" style={{ margin: "0 0 8px" }}>Answer 3 questions in your own words. Each answer needs at least {MIN_WORDS} words. You cannot paste. Your instructor will read your answers.</p>
+        <p className="small" style={{ margin: "0 0 8px" }}>Answer 10 questions in your own words. Each answer needs at least {MIN_WORDS} words. You cannot paste. Your instructor will read your answers.</p>
         <button className="btn small" onClick={load} disabled={!!busy}>{busy ? "Getting your questions..." : saved ? "Try a new written check" : "Start the written check"}</button>
         {error && <div className="err">{error}</div>}
       </div>
@@ -396,7 +431,10 @@ export function WrittenCheck({ t, w, saved, onSave }) {
       {note && !result && <div className="small" style={{ color: "var(--red)", marginBottom: 8 }}>{note}</div>}
       {error && <div className="err">{error}</div>}
       {!result ? (
-        <button className="btn teal small" onClick={grade} disabled={!ready || !!busy}>{busy === "grade" ? "Grading..." : "Turn in my answers"}</button>
+        <div className="row" style={{ flexWrap: "wrap" }}>
+          <button className="btn teal small" onClick={grade} disabled={!ready || !!busy}>{busy === "grade" ? "Grading..." : "Turn in my answers"}</button>
+          <span className="small muted">{qs.filter((_, i) => words(ans[i]) >= MIN_WORDS).length} of {qs.length} answered. Your answers save as you type.</span>
+        </div>
       ) : (
         <div className="row" style={{ flexWrap: "wrap" }}>
           <span className={"chip " + (result.passed ? "green" : "")}>{result.passed ? "You passed" : "Not yet"}: {result.avg} of 10 average</span>
