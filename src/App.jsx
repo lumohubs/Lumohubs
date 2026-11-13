@@ -154,7 +154,9 @@ export default function App() {
   const go = (v) => { setView(v); setTrackId(null); };
   const openTrack = (id) => {
     setView("tracks"); setTrackId(id);
-    if (learner && learner.trackId !== id) saveLearner({ trackId: id, event: "opened " + id });
+    // Business Tools runs next to the main track, so opening it never replaces the main track.
+    const keepMain = id === "business-systems" && learner && learner.trackId;
+    if (learner && learner.trackId !== id && !keepMain) saveLearner({ trackId: id, event: "opened " + id });
   };
 
   const navButtons = NAV.map((g) => (
