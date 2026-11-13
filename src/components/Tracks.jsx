@@ -3,6 +3,7 @@ import { SECTORS, TRACKS, LIVE_TRACKS, trackById } from "../data/tracks";
 import { QUIZ } from "../data/demo";
 import { askClaude, readImage } from "../ai";
 import { getLearner, saveLearner } from "../learner";
+import { isVocational } from "../data/tracks";
 import { useWork, weekKey, newId, assignmentFor, SubmitWork, WeekQuiz } from "./Work";
 import { Markdown } from "./Markdown";
 import { Icon, IconBadge } from "./Icons";
@@ -94,6 +95,17 @@ export function TrackDetail({ id, onBack, onJoinWaitlist, waitlist, progress, se
         </div>
       </div>
 
+      {!soon && isVocational(t) && (
+        <div className="panel tint section">
+          <h3 style={{ marginTop: 0 }}>How you finish this track</h3>
+          <div className="row" style={{ alignItems: "flex-start", gap: 16, flexWrap: "wrap" }}>
+            <div style={{ flex: 1, minWidth: 220 }}><strong>Step 1: Online basics</strong><div className="small">6 weeks here in the app. Learn the basics, safety, and the tools.</div></div>
+            <div style={{ flex: 1, minWidth: 220 }}><strong>Step 2: Hands on, in person</strong><div className="small">Practice for real with an instructor at a Lumo Hubs location or partner site. This step is required.</div></div>
+          </div>
+          <p className="small" style={{ margin: "10px 0 0" }}><strong>You finish this track after Step 2.</strong> We will contact you to set up your in person training when you finish the online basics.</p>
+        </div>
+      )}
+
       {soon ? (
         <div className="panel tint section">
           <h3>This track opens soon</h3>
@@ -117,7 +129,7 @@ export function TrackDetail({ id, onBack, onJoinWaitlist, waitlist, progress, se
             ) : (
               <p style={{ marginTop: 12 }}>Paid by employers. Companies send their staff, or sponsor students they want to hire. Advanced runs on real company systems and a live employer project.</p>
             )}
-            <div className="small muted">Your progress: {done.length} of 6 weeks done. {submitted} of 6 assignments submitted. {passed} of 6 quizzes passed.</div>
+            <div className="small muted">{isVocational(t) ? "Online basics" : "Your progress"}: {done.length} of 6 weeks done. {submitted} of 6 assignments submitted. {passed} of 6 quizzes passed.</div>
             <div className="bar" style={{ marginTop: 6 }}><span style={{ width: `${(done.length / 6) * 100}%` }} /></div>
           </div>
           <div className="panel">
@@ -129,7 +141,7 @@ export function TrackDetail({ id, onBack, onJoinWaitlist, waitlist, progress, se
         </div>
       )}
 
-      <h3>Your 6 week plan</h3>
+      <h3>{isVocational(t) ? "Your 6 week online basics" : "Your 6 week plan"}</h3>
       <div className="grid" style={{ gap: 12 }}>
         {t.weeks.map((w) => (
           <WeekCard key={w.week} t={t} w={w} level={level} locked={soon} done={done.includes(w.week)} onComplete={() => markDone(w.week)} />
@@ -183,7 +195,7 @@ function WeekCard({ t, w, level, locked, done, onComplete }) {
     "If the student asks their own question, answer it.",
     "Use plain language a beginner understands. Be practical and specific. Keep each reply under 220 words. Use short paragraphs, bold for key words, and simple lists. No tables. Do not use em dashes.",
     t.id === "healthcare" ? "This is for training only. Never give a medical diagnosis for a real patient. Say a licensed professional must decide." : "",
-    t.sector === "trades" ? "Always include safety steps. Tell the learner when a licensed professional is needed." : "",
+    t.sector === "trades" ? "Always include safety steps. Tell the learner when a licensed professional is needed. This is the online basics part of the track. The learner is not finished or job ready until they complete hands on, in person training with an instructor. Never say they are fully trained from the online weeks alone." : "",
   ].filter(Boolean).join(" ");
 
   async function send(kind, sub) {

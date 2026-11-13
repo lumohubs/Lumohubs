@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { LIVE_TRACKS, SECTORS, trackById } from "../data/tracks";
+import { LIVE_TRACKS, SECTORS, trackById, isVocational } from "../data/tracks";
 import { askClaude } from "../ai";
 import { useLearner, signIn, signOut, saveLearner } from "../learner";
 import { Markdown } from "./Markdown";
@@ -93,7 +93,9 @@ function buildSystem(l) {
     l.goal ? `Their goal: ${l.goal}.` : "You do not know their goal yet. Find out what they want: a first job, a better job, a career change, start a business, or a new skill.",
     "Lumo Hubs plan: every learner takes Business Systems & Tools (Salesforce, Monday.com, Asana, HubSpot, Slack, Google Workspace, Excel, Copilot) at the same time as their main track. They work on both each week. For trades and vocational learners, explain that these tools help them find customers, book and track jobs, send quotes, and run their own business. Learners who already know the tools can tap 'I already know these' on their plan and pass a 5 question check to skip it.",
     bizStatus(l) === "tested-out" ? "This learner tested out of Business Tools. Do not push it." : bizStatus(l) === "on" ? `Business Tools: ${((l.progress || {})[BIZ] || []).length} of 6 weeks done.` : "",
-    t ? `Their main track: ${t.name}. Weeks done: ${doneCount} of 6. ${nw ? "Next up: Week " + nw + "." : "They finished all 6 weeks. Congratulate them and point them to their portfolio and the Talent Network for jobs."}` : "They have not picked a track yet.",
+    t ? `Their main track: ${t.name}. Weeks done: ${doneCount} of 6. ${nw ? "Next up: Week " + nw + "." : isVocational(t) ? "They finished the online basics. They are NOT finished yet: the next step is hands on, in person training. Tell them to tap 'Request my in person spot' on their plan." : "They finished all 6 weeks. Congratulate them and point them to their portfolio and the Talent Network for jobs."}` : "They have not picked a track yet.",
+    t && isVocational(t) ? (l.inPerson === "requested" ? "They already requested their in person training spot. The Lumo Hubs team will contact them." : "") : "",
+    "Vocational (trades) tracks like Plumbing, Electrical, HVAC, Solar, and Agriculture have two steps: online basics in the app, then required hands on, in person training with an instructor at a Lumo Hubs location or partner site. A learner finishes only after the in person step. Say this clearly when you recommend a trades track.",
     ago != null ? `Their last visit was ${ago === 0 ? "earlier today" : ago + " days ago"}.` : "",
     `Tracks you can recommend (id: name): ${CATALOG}.`,
     "How to guide them: 1) learn their goal and what they already know, 2) recommend ONE or TWO tracks that fit and say why in one line each, 3) once they choose, tell them to press the button to start their week, 4) on later visits, cheer their progress and point to the next week.",
@@ -194,7 +196,7 @@ function Offer({ onStart, onAsk, busy, currentId }) {
                         <div className="row" style={{ flexWrap: "wrap", gap: 6, marginTop: 4 }}>{t.software.map((x) => <span key={x} className="chip">{x}</span>)}</div>
                       </div>
                     )}
-                    <div className="small">6 weeks. First 2 weeks free to try.{t.avgPay ? " Typical pay: " + t.avgPay + "." : ""}</div>
+                    <div className="small">{isVocational(t) ? "Step 1: 6 weeks of online basics (first 2 weeks free to try). Step 2: hands on, in person training. You finish after Step 2." : "6 weeks. First 2 weeks free to try."}{t.avgPay ? " Typical pay: " + t.avgPay + "." : ""}</div>
                   </div>
                 </div>
                 <div className="row" style={{ marginTop: 10, flexWrap: "wrap" }}>
@@ -296,9 +298,18 @@ export function Guide({ openTrack }) {
         <div className="panel tint" style={{ marginBottom: 12 }}>
           <h3 style={{ margin: "0 0 8px", fontSize: "1.05rem" }}>Your plan</h3>
           <div className="row between" style={{ flexWrap: "wrap", gap: 8 }}>
-            <span><strong>Main track:</strong> {t.name}, {nw ? "Week " + nw : "done"}</span>
-            {nw ? <button className="btn teal small" onClick={() => openTrack(t.id)}>Continue Week {nw}</button> : <span className="chip green">Finished</span>}
+            <span><strong>Main track:</strong> {t.name}, {nw ? (isVocational(t) ? "online basics, Week " + nw : "Week " + nw) : isVocational(t) ? "online basics done" : "done"}</span>
+            {nw ? <button className="btn teal small" onClick={() => openTrack(t.id)}>Continue Week {nw}</button> : !isVocational(t) && <span className="chip green">Finished</span>}
           </div>
+          {isVocational(t) && (
+            <div className="small" style={{ marginTop: 6 }}>
+              {nw
+                ? "Step 1 is online basics. Step 2 is hands on, in person training. You finish after Step 2."
+                : l.inPerson === "requested"
+                  ? <span className="chip green">In person spot requested. We will contact you to set it up.</span>
+                  : <span className="row" style={{ gap: 8, flexWrap: "wrap" }}><strong>Next: hands on, in person training (required to finish).</strong><button className="btn small" onClick={() => saveLearner({ inPerson: "requested", event: "requested in person " + t.id })}>Request my in person spot</button></span>}
+            </div>
+          )}
           {biz === "on" && (
             <div className="row between" style={{ flexWrap: "wrap", gap: 8, marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(0,0,0,0.08)" }}>
               <span><strong>Business Tools:</strong> {bizWeek ? "Week " + bizWeek : "done"} <span className="small muted">(Salesforce, HubSpot, Monday.com and more)</span></span>
