@@ -58,7 +58,10 @@ async function askSmallModel({ system, messages, max_tokens, oidc, prefer }) {
   if (!token) throw { status: 500, msg: "The AI gateway is not set up. Turn on AI Gateway for this Vercel project." };
   const args = { system, messages, max_tokens, token };
   // Photos need Ministral. "check" asks a different model first, for a real second opinion.
-  let order = hasImage(messages) ? [MAIN] : prefer === "check" ? [...BACKUPS, MAIN] : [MAIN, ...BACKUPS];
+  let order = hasImage(messages) ? [MAIN]
+    : prefer === "check" ? [BACKUPS[0], BACKUPS[1], MAIN]
+    : prefer === "check2" ? [BACKUPS[1], BACKUPS[0], MAIN]
+    : [MAIN, ...BACKUPS];
   let lastErr = null;
   for (let round = 0; round < 2; round++) {
     let minWait = 60;
