@@ -179,8 +179,8 @@ export function WeekQuiz({ t, w, saved, onSave }) {
     const valid = (x) => x && x.q && Array.isArray(x.options) && x.options.length === 4 && Number.isInteger(x.answer) && x.answer >= 0 && x.answer < 4;
     let kept = [];
     let lastErr = "";
-    // Up to 2 rounds: write questions, then a different small model answers them without the key.
-    // Only questions where both models agree are kept, so students are not graded on a wrong key.
+    // Up to 2 rounds: one small model writes questions, two other small models answer them without the key.
+    // A question is kept only when 2 of the 3 models agree on the answer, so students are not graded on a wrong key.
     for (let round = 0; round < 2 && kept.length < QUIZ_SIZE; round++) {
       const r = await askClaude({ system: "You write hard, fair, practical training quizzes. Reply with JSON only.", prompt, maxTokens: 2000 });
       if (r.error) { lastErr = r.error; break; }
@@ -189,17 +189,17 @@ export function WeekQuiz({ t, w, saved, onSave }) {
       list = list.filter((x) => !kept.some((k) => k.q === x.q));
       if (!list.length) continue;
       const sheet = list.map((x, i) => (i + 1) + ". " + x.q + "\n" + x.options.map((o, k) => "   " + k + ") " + o).join("\n")).join("\n");
-      const v = await askClaude({
-        system: "You are an expert in this subject. Answer carefully. Reply with JSON only.",
-        prompt: "Topic: " + t.name + ", " + w.title + ". For each question pick the single best option number (0 to 3). Think about real work practice. Reply ONLY with JSON: {\"answers\":[n, n, ...]} with one number per question, in order.\n\n" + sheet,
-        maxTokens: 600,
-        prefer: "check",
-      });
-      if (v.error) { lastErr = v.error; break; }
-      try {
-        const a = parse(v.text).answers || [];
-        kept = kept.concat(list.filter((x, i) => Number(a[i]) === x.answer));
-      } catch { /* try another round */ }
+      const checkPrompt = "Topic: " + t.name + ", " + w.title + ". For each question pick the single best option number (0 to 3). Think about real work practice. Reply ONLY with JSON: {\"answers\":[n, n, ...]} with one number per question, in order.\n\n" + sheet;
+      const sys = "You are an expert in this subject. Answer carefully. Reply with JSON only.";
+      // Two other small models answer without the key. Keep a question when at least one agrees (2 of 3 votes).
+      const [v1, v2] = await Promise.all([
+        askClaude({ system: sys, prompt: checkPrompt, maxTokens: 600, prefer: "check" }),
+        askClaude({ system: sys, prompt: checkPrompt, maxTokens: 600, prefer: "check2" }),
+      ]);
+      const read = (v) => { try { return v.error ? [] : parse(v.text).answers || []; } catch { return []; } };
+      const a1 = read(v1), a2 = read(v2);
+      if (!a1.length && !a2.length) { lastErr = v1.error || v2.error || ""; continue; }
+      kept = kept.concat(list.filter((x, i) => Number(a1[i]) === x.answer || Number(a2[i]) === x.answer));
     }
     if (kept.length >= QUIZ_SIZE) {
       const clean = (v) => String(v).replace(/\*+/g, "").replace(/\s*[\u2014\u2013]\s*/g, ", ");
