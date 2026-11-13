@@ -137,9 +137,16 @@ function buildSystem(l) {
     "Special lines (the app reads these and hides them). When you learn their goal, add a line at the very end: GOAL: <their goal in under 12 words>. When you recommend a track, add a line at the very end for each: TRACK: <track id>. Use exact ids from the list.",
     "Every track teaches the real company software listed with it. When asked about a tool, name the track that teaches it. Recommend a MAIN track that fits their goal; Business Tools comes with it automatically.",
     "The app shows the full list of tracks under this chat, grouped by area, so the learner can browse and pick. When they seem unsure, tell them to look at the list below or name 2 or 3 tracks.",
+    "Never show track ids to the learner. In your message, use only track names like Marketing & Social Media. Ids go only in the TRACK: lines.",
+    "Button names in the app: 'Continue Week N' on the plan, 'Start this track' and 'See all tracks we offer' in the track list. Use these exact names.",
+    "When the learner asks to see all choices, tell them to tap 'See all tracks we offer' below the chat, then name 2 or 3 that fit their goal.",
     "Never make up jobs, pay, or promises. If you do not know, say so.",
   ].filter(Boolean).join(" ");
 }
+
+// Removes "track-id: " labels the model sometimes puts before a track name.
+// Only at the start of a line or list item, so normal sentences are not touched.
+const ID_LABEL = new RegExp("^(\\s*(?:[-*\\u2022]\\s+|\\d+[.)]\\s+)?)(?:\\*\\*)?(?:" + LIVE_TRACKS.map((t) => t.id.replace(/[-]/g, "\\-")).join("|") + ")\\s*:\\s*(?:\\*\\*)?\\s*", "gim");
 
 // Pull out GOAL: and TRACK: lines.
 function parseReply(text) {
@@ -150,7 +157,7 @@ function parseReply(text) {
     if (g) { goals.push(g[1].replace(/\*+$/, "").trim()); return false; }
     if (tr) { if (trackById(tr[1].toLowerCase())) tracks.push(tr[1].toLowerCase()); return false; }
     return true;
-  }).join("\n").replace(/\s*[\u2014\u2013]\s*/g, ", ").trim();
+  }).join("\n").replace(/\s*[\u2014\u2013]\s*/g, ", ").replace(ID_LABEL, "$1").trim();
   return { clean, goal: goals[0], tracks: Array.from(new Set(tracks)).slice(0, 2) };
 }
 
