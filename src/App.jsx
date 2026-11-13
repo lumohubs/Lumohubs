@@ -7,6 +7,8 @@ import { TalentNetwork, Profile } from "./components/Talent";
 import { EmployerDashboard, StudentTracking, Outcomes } from "./components/Dashboards";
 import { HubBooking, BusinessBuilder, PlumberFix } from "./components/Services";
 import { Icon, IconBadge } from "./components/Icons";
+import { Guide } from "./components/Guide";
+import { initLearner, saveLearner, useLearner } from "./learner";
 
 const ME = { student: "l1", community: "l3", professional: "l4" };
 
@@ -48,6 +50,7 @@ function Home({ go, setRole, openTrack }) {
       <section className="hero">
         <h1>We don't just teach AI.<span className="line2">We put it to work.</span></h1>
         <p style={{ fontSize: "1.15rem" }} className="muted">Lumo Hubs trains students, community members, and professionals in {LIVE_TRACKS.length} tracks across {SECTORS.length} sectors, then connects them to real jobs. One place from learning to a paycheck.</p>
+        <div style={{ margin: "14px 0" }}><button className="btn teal" onClick={() => go("coach")}>Talk to your Lumo coach</button></div>
         <div className="path" aria-label="How Lumo Hubs works">
           <div><strong>Learn</strong><span className="small muted">Free Foundation tracks</span></div>
           <div><strong>Practice</strong><span className="small muted">Real employer projects</span></div>
@@ -62,7 +65,7 @@ function Home({ go, setRole, openTrack }) {
           <div key={p.role} className="panel" style={{ display: "flex", flexDirection: "column" }}>
             <h3>{p.title}</h3>
             <p className="muted" style={{ flex: 1 }}>{p.body}</p>
-            <div><button className="btn" onClick={() => { setRole(p.role); go(p.to); }}>{p.cta}</button></div>
+            <div><button className="btn" onClick={() => { setRole(p.role); go(p.role === "employer" ? p.to : "coach"); }}>{p.cta}</button></div>
           </div>
         ))}
       </div>
@@ -98,7 +101,7 @@ function Home({ go, setRole, openTrack }) {
 }
 
 const NAV = [
-  { group: "learn", items: [["home", "Home"], ["tracks", "BookOpen"], ["quiz", "Compass"], ["portfolio", "IdCard"], ["builder", "Rocket"]] },
+  { group: "learn", items: [["home", "Home"], ["coach", "Users"], ["tracks", "BookOpen"], ["quiz", "Compass"], ["portfolio", "IdCard"], ["builder", "Rocket"]] },
   { group: "work", items: [["talent", "Briefcase"], ["employer", "Building2"], ["plumberfix", "Wrench"]] },
   { group: "run", items: [["tracking", "ClipboardList"], ["hub", "Mic"], ["outcomes", "TrendingUp"]] },
 ];
@@ -114,6 +117,21 @@ export default function App() {
   const [waitlist, setWaitlist] = useState([]);
   const [applications, setApplications] = useState([]);
   const t = STR[lang];
+  const { learner } = useLearner();
+
+  useEffect(() => { initLearner(); }, []);
+  // When saved progress comes back from the server, show it.
+  useEffect(() => {
+    const f = () => { try { setProgress(JSON.parse(localStorage.getItem("lh-progress") || "{}")); } catch {} };
+    window.addEventListener("lh-progress", f);
+    return () => window.removeEventListener("lh-progress", f);
+  }, []);
+  // Save work (assignments and quizzes) to the learner's account.
+  useEffect(() => {
+    const f = () => { try { saveLearner({ weeks: JSON.parse(localStorage.getItem("lh-work") || "{}").weeks || {} }); } catch {} };
+    window.addEventListener("lh-work", f);
+    return () => window.removeEventListener("lh-work", f);
+  }, []);
 
   useEffect(() => {
     // If no access code is set on the server, open the site straight away.
@@ -122,7 +140,10 @@ export default function App() {
       .catch(() => setUnlocked(true))
       .finally(() => setChecked(true));
   }, []);
-  useEffect(() => { try { localStorage.setItem("lh-progress", JSON.stringify(progress)); } catch {} }, [progress]);
+  useEffect(() => {
+    try { localStorage.setItem("lh-progress", JSON.stringify(progress)); } catch {}
+    if (learner && JSON.stringify(learner.progress || {}) !== JSON.stringify(progress)) saveLearner({ progress });
+  }, [progress]);
   useEffect(() => { document.documentElement.dir = lang === "ar" ? "rtl" : "ltr"; document.documentElement.lang = lang; }, [lang]);
   useEffect(() => { window.scrollTo(0, 0); }, [view, trackId]);
 
@@ -131,7 +152,10 @@ export default function App() {
 
   const me = LEARNERS.find((l) => l.id === (ME[role] || "l1"));
   const go = (v) => { setView(v); setTrackId(null); };
-  const openTrack = (id) => { setView("tracks"); setTrackId(id); };
+  const openTrack = (id) => {
+    setView("tracks"); setTrackId(id);
+    if (learner && learner.trackId !== id) saveLearner({ trackId: id, event: "opened " + id });
+  };
 
   const navButtons = NAV.map((g) => (
     <div key={g.group}>
@@ -146,6 +170,7 @@ export default function App() {
 
   let page;
   if (view === "home") page = <Home go={go} setRole={setRole} openTrack={openTrack} />;
+  else if (view === "coach") page = <Guide openTrack={openTrack} />;
   else if (view === "tracks") page = trackId
     ? <TrackDetail id={trackId} onBack={() => setTrackId(null)} waitlist={waitlist} onJoinWaitlist={(id) => setWaitlist([...waitlist, id])} progress={progress} setProgress={setProgress} />
     : <TrackLibrary onOpen={openTrack} lang={lang} />;
@@ -191,7 +216,7 @@ export default function App() {
           </div>
         </header>
         <main className="page">{page}</main>
-        <footer className="page small muted" style={{ paddingTop: 0 }}>Lumo Hubs. AI features powered by Claude. Sample names and numbers are for demonstration only.</footer>
+        <footer className="page small muted" style={{ paddingTop: 0 }}>Lumo Hubs. AI coach powered by Ministral 8B, a small open model. Sample names and numbers are for demonstration only.</footer>
       </div>
     </div>
   );
