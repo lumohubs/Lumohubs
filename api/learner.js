@@ -101,6 +101,7 @@ export default async function handler(req, res) {
       if (typeof p.goal === "string") l.goal = p.goal.slice(0, 300);
       if (typeof p.trackId === "string") l.trackId = p.trackId.slice(0, 60);
       if (p.bizTools === "on" || p.bizTools === "tested-out") l.bizTools = p.bizTools;
+      if (p.bizCheckFailedAt) l.bizCheckFailedAt = Date.now();
       if (p.inPerson === "requested" && l.inPerson !== "requested") { l.inPerson = "requested"; l.inPersonAt = Date.now(); }
       if (p.progress && typeof p.progress === "object") l.progress = p.progress;
       if (p.weeks && typeof p.weeks === "object") l.weeks = p.weeks;
