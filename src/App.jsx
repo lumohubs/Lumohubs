@@ -8,6 +8,7 @@ import { EmployerDashboard, StudentTracking, Outcomes } from "./components/Dashb
 import { HubBooking, BusinessBuilder, PlumberFix } from "./components/Services";
 import { Icon, IconBadge } from "./components/Icons";
 import { Guide } from "./components/Guide";
+import { InstructorView } from "./components/Instructor";
 import { initLearner, saveLearner, useLearner } from "./learner";
 
 const ME = { student: "l1", community: "l3", professional: "l4" };
@@ -103,7 +104,7 @@ function Home({ go, setRole, openTrack }) {
 const NAV = [
   { group: "learn", items: [["home", "Home"], ["coach", "Users"], ["tracks", "BookOpen"], ["quiz", "Compass"], ["portfolio", "IdCard"], ["builder", "Rocket"]] },
   { group: "work", items: [["talent", "Briefcase"], ["employer", "Building2"], ["plumberfix", "Wrench"]] },
-  { group: "run", items: [["tracking", "ClipboardList"], ["hub", "Mic"], ["outcomes", "TrendingUp"]] },
+  { group: "run", items: [["instructor", "IdCard"], ["tracking", "ClipboardList"], ["hub", "Mic"], ["outcomes", "TrendingUp"]] },
 ];
 
 export default function App() {
@@ -182,6 +183,7 @@ export default function App() {
   else if (view === "talent") page = <TalentNetwork me={me} applications={applications} setApplications={setApplications} />;
   else if (view === "employer") page = <EmployerDashboard />;
   else if (view === "plumberfix") page = <PlumberFix onOpenTrack={openTrack} />;
+  else if (view === "instructor") page = <InstructorView />;
   else if (view === "tracking") page = <StudentTracking />;
   else if (view === "hub") page = <HubBooking role={role} />;
   else if (view === "outcomes") page = <Outcomes />;

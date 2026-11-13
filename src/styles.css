@@ -149,3 +149,9 @@ tr:last-child td { border-bottom: 0; }
 /* Gate */
 .gate { min-height: 100vh; display: grid; place-items: center; padding: 20px; background: var(--surface); }
 .gate .panel { max-width: 420px; width: 100%; padding: 28px; }
+
+@media print {
+  .side, .mobile-nav, .topbar, footer, .no-print { display: none !important; }
+  .main, .page { padding: 0 !important; margin: 0 !important; }
+  details { display: block; }
+}
