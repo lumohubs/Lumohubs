@@ -51,7 +51,7 @@ function parseReply(text) {
     if (g) { goals.push(g[1].replace(/\*+$/, "").trim()); return false; }
     if (tr) { if (trackById(tr[1].toLowerCase())) tracks.push(tr[1].toLowerCase()); return false; }
     return true;
-  }).join("\n").trim();
+  }).join("\n").replace(/\s*[\u2014\u2013]\s*/g, ", ").trim();
   return { clean, goal: goals[0], tracks: Array.from(new Set(tracks)).slice(0, 2) };
 }
 
