@@ -137,3 +137,7 @@ export const TRACKS = ALL.filter((t) => META[t.id]).map((t) => ({
 export const LIVE_TRACKS = TRACKS.filter((t) => t.status === "live");
 export const SOON_TRACKS = TRACKS.filter((t) => t.status === "soon");
 export const trackById = (id) => TRACKS.find((t) => t.id === id);
+
+// Vocational (trades) tracks: the online weeks are the basics. Learners finish only after
+// hands on, in person training at a Lumo Hubs location or partner site.
+export const isVocational = (t) => !!t && t.sector === "trades";
