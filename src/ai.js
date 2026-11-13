@@ -1,4 +1,4 @@
-export async function askClaude({ system, prompt, image, messages, maxTokens = 1500 }) {
+export async function askClaude({ system, prompt, image, messages, maxTokens = 1500, prefer }) {
   // Send a full chat (messages) for Q and A, or a single prompt (with an optional photo).
   let msgs = messages;
   if (!Array.isArray(msgs) || msgs.length === 0) {
@@ -11,7 +11,7 @@ export async function askClaude({ system, prompt, image, messages, maxTokens = 1
     const r = await fetch("/api/claude", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ system, max_tokens: maxTokens, messages: msgs }),
+      body: JSON.stringify({ system, max_tokens: maxTokens, messages: msgs, prefer }),
     });
     const data = await r.json().catch(() => ({}));
     if (!r.ok) return { error: data.error || "The AI mentor is not available right now." };
