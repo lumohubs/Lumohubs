@@ -149,6 +149,10 @@ export function SubmitWork({ t, w, saved, onSubmit, busy }) {
 }
 
 // Step 3: a short graded quiz for the week. Pass with 2 of 3 or better.
+// Weekly quiz: 10 hard questions. Pass with 8 of 10.
+const QUIZ_SIZE = 10;
+const QUIZ_PASS = 8;
+
 export function WeekQuiz({ t, w, saved, onSave }) {
   const [qs, setQs] = useState(null);
   const [picks, setPicks] = useState({});
@@ -158,18 +162,55 @@ export function WeekQuiz({ t, w, saved, onSave }) {
 
   async function load() {
     setBusy(true); setError(""); setResult(null); setPicks({});
-    const prompt = "Write a 3 question multiple choice quiz for a beginner on Lumo Hubs " + t.name + ", Week " + w.week + ": " + w.title + ". Focus: " + w.focus + " Tools: " + (w.tools || []).join(", ") + ". Use plain words. Each question has 4 options and one correct answer. Reply ONLY with JSON, no other text: {\"questions\":[{\"q\":\"question\",\"options\":[\"a\",\"b\",\"c\",\"d\"],\"answer\":0,\"why\":\"one short sentence\"}]}";
-    const r = await askClaude({ system: "You write short, fair training quizzes. Reply with JSON only. Do not use em dashes.", prompt, maxTokens: 900 });
-    let list = null;
-    if (!r.error) {
+    const prompt = [
+      "Write a hard 12 question multiple choice quiz on Lumo Hubs " + t.name + ", Week " + w.week + ": " + w.title + ". Focus: " + w.focus + " Tools: " + (w.tools || []).join(", ") + ".",
+      "Make it hard but fair. Most questions should be real work scenarios that test if the student can apply what they learned, not just repeat words.",
+      t.sector === "trades" ? "Include questions on naming the right tool for a job, what a tool is used for, and safety steps." : "",
+      /health|medical|radiolog/i.test(t.id + t.name) ? "Include questions on safe steps, the right order of steps, and patient safety." : "",
+      t.sector !== "trades" && !/health|medical|radiolog/i.test(t.id + t.name) ? "Include questions on the exact steps to do a task in this week's software, like where to click or which setting to use." : "",
+      "Each question has 4 options. All 4 options must sound believable. One is correct. Do not use all of the above or none of the above.",
+      "Use plain words. Keep each question and option short. Keep why under 15 words. Do not use em dashes.",
+      'Reply ONLY with JSON, no other text: {"questions":[{"q":"question","options":["a","b","c","d"],"answer":0,"why":"short"}]}',
+    ].filter(Boolean).join(" ");
+    const parse = (text) => {
+      const raw = String(text || "");
+      return JSON.parse(raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1));
+    };
+    const valid = (x) => x && x.q && Array.isArray(x.options) && x.options.length === 4 && Number.isInteger(x.answer) && x.answer >= 0 && x.answer < 4;
+    let kept = [];
+    let lastErr = "";
+    // Up to 2 rounds: write questions, then a different small model answers them without the key.
+    // Only questions where both models agree are kept, so students are not graded on a wrong key.
+    for (let round = 0; round < 2 && kept.length < QUIZ_SIZE; round++) {
+      const r = await askClaude({ system: "You write hard, fair, practical training quizzes. Reply with JSON only.", prompt, maxTokens: 2000 });
+      if (r.error) { lastErr = r.error; break; }
+      let list = [];
+      try { list = (parse(r.text).questions || []).filter(valid); } catch { list = []; }
+      list = list.filter((x) => !kept.some((k) => k.q === x.q));
+      if (!list.length) continue;
+      const sheet = list.map((x, i) => (i + 1) + ". " + x.q + "\n" + x.options.map((o, k) => "   " + k + ") " + o).join("\n")).join("\n");
+      const v = await askClaude({
+        system: "You are an expert in this subject. Answer carefully. Reply with JSON only.",
+        prompt: "Topic: " + t.name + ", " + w.title + ". For each question pick the single best option number (0 to 3). Think about real work practice. Reply ONLY with JSON: {\"answers\":[n, n, ...]} with one number per question, in order.\n\n" + sheet,
+        maxTokens: 600,
+        prefer: "check",
+      });
+      if (v.error) { lastErr = v.error; break; }
       try {
-        const raw = String(r.text || "");
-        const j = JSON.parse(raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1));
-        list = (j.questions || []).filter((x) => x.q && Array.isArray(x.options) && x.options.length >= 2 && Number.isInteger(x.answer)).slice(0, 3);
-      } catch { list = null; }
+        const a = parse(v.text).answers || [];
+        kept = kept.concat(list.filter((x, i) => Number(a[i]) === x.answer));
+      } catch { /* try another round */ }
     }
-    if (!list || list.length === 0) setError(r.error || "The quiz did not load. Try again.");
-    else setQs(list);
+    if (kept.length >= QUIZ_SIZE) {
+      const clean = (v) => String(v).replace(/\*+/g, "").replace(/\s*[\u2014\u2013]\s*/g, ", ");
+      setQs(kept.slice(0, QUIZ_SIZE).map((x) => {
+        // Shuffle the options so the right answer is not always in the same spot.
+        const order = [0, 1, 2, 3].sort(() => Math.random() - 0.5);
+        return { q: clean(x.q), options: order.map((k) => clean(x.options[k])), answer: order.indexOf(x.answer), why: clean(x.why || "") };
+      }));
+    } else {
+      setError(lastErr || "The quiz did not load. Press the button again.");
+    }
     setBusy(false);
   }
 
@@ -177,7 +218,7 @@ export function WeekQuiz({ t, w, saved, onSave }) {
     const score = qs.reduce((n, q, i) => n + (picks[i] === q.answer ? 1 : 0), 0);
     const missed = qs.filter((q, i) => picks[i] !== q.answer).map((q) => q.q);
     const tries = ((saved && saved.tries) || (saved ? 1 : 0)) + 1;
-    const res = { score, total: qs.length, passed: score >= Math.ceil(qs.length * 0.66), date: new Date().toISOString(), missed };
+    const res = { score, total: qs.length, passed: score >= QUIZ_PASS, date: new Date().toISOString(), missed };
     setResult(res);
     onSave(saved && saved.score > score ? { ...saved, tries, lastTry: res } : { ...res, tries });
   }
@@ -186,7 +227,8 @@ export function WeekQuiz({ t, w, saved, onSave }) {
     return (
       <div>
         {saved && <div style={{ marginBottom: 8 }}><span className={"chip " + (saved.passed ? "green" : "")}>{saved.passed ? "Passed" : "Not passed yet"}: {saved.score} of {saved.total}</span></div>}
-        <button className="btn small" onClick={load} disabled={busy}>{busy ? "Making your quiz..." : saved ? "Take the quiz again" : "Start the Week " + w.week + " quiz"}</button>
+        <button className="btn small" onClick={load} disabled={busy}>{busy ? "Making your quiz..." : saved ? "Take a new quiz" : "Start the Week " + w.week + " quiz"}</button>
+        <div className="small muted" style={{ marginTop: 6 }}>{QUIZ_SIZE} questions. You need {QUIZ_PASS} right to pass. Each try has new questions.</div>
         {error && <div className="err">{error}</div>}
       </div>
     );
