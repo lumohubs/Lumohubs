@@ -27,34 +27,69 @@ function bizStatus(l) {
   return "on";
 }
 
-// Quick check to test out of Business Tools. Pass with 4 of 5.
+// Check to test out of Business Tools. 10 real work questions. Pass with 8 of 10.
+// Answers are shuffled each time, and a failed try locks the check for 24 hours.
+const PASS = 8;
+const RETRY_HOURS = 24;
 const BIZ_CHECK = [
-  { q: "What is Salesforce mostly used for?", a: ["Tracking customers and sales", "Editing photos", "Writing code", "Filing taxes"], c: 0 },
-  { q: "On a Monday.com or Asana board, what is a task?", a: ["A chat message", "A piece of work with an owner and a due date", "A type of invoice", "A login page"], c: 1 },
-  { q: "In HubSpot, what is a deal?", a: ["A discount code", "A possible sale you are tracking", "A team meeting", "A saved email draft"], c: 1 },
-  { q: "What is the best way to ask a coworker a quick question in Slack?", a: ["Email the whole company", "Send a short, clear message to the right person or channel", "Wait for the weekly meeting", "Post it on social media"], c: 1 },
-  { q: "In Excel or Google Sheets, what does a pivot table do?", a: ["Changes the font", "Turns many rows into a short summary", "Sends the file to your boss", "Deletes empty cells"], c: 1 },
+  { q: "In Salesforce, you convert a qualified Lead. What does Salesforce usually create?",
+    ok: "An Account and a Contact, and an Opportunity if you choose",
+    no: ["A Case and a Task", "A Campaign and a Report", "A new User login"] },
+  { q: "In Salesforce, what is the difference between a Report and a Dashboard?",
+    ok: "A Report pulls a list of records with filters. A Dashboard shows charts built from Reports.",
+    no: ["They are the same thing with different names", "A Dashboard is used to enter new data and a Report is used to delete it", "A Report is only for admins and a Dashboard is only for sales reps"] },
+  { q: "In HubSpot, what does a contact's lifecycle stage tell you?",
+    ok: "How close the contact is to becoming a customer",
+    no: ["How long the contact has been in the database", "Which email template the contact last opened", "The contact's age group"] },
+  { q: "In HubSpot, what is an MQL?",
+    ok: "A lead that marketing thinks is ready to hand to sales",
+    no: ["A customer who has already paid", "A lead that sales has rejected", "A list of email addresses bought from a vendor"] },
+  { q: "In Asana or Monday.com, Task B cannot start until Task A is done. Which feature shows this?",
+    ok: "A dependency",
+    no: ["A subtask", "A tag", "A private board"] },
+  { q: "On a Monday.com board, \"When Status changes to Done, notify the manager\" is an example of what?",
+    ok: "An automation (a trigger and an action)",
+    no: ["An integration with another app", "A formula column", "A dashboard widget"] },
+  { q: "Your 12 person project team made a decision everyone needs to find later. What is the best way to share it in Slack?",
+    ok: "Post it in the project channel and pin it",
+    no: ["Send each person a direct message", "Post it in #general for the whole company", "Say it in a huddle and do not write it down"] },
+  { q: "You want a coworker to suggest changes to your Google Doc without changing your text. Which access do you give?",
+    ok: "Commenter, so they can comment and suggest",
+    no: ["Editor", "Viewer", "Owner"] },
+  { q: "In Excel, what does =SUMIFS(C:C, A:A, \"East\", B:B, \">100\") do?",
+    ok: "Adds the numbers in column C where column A is East and column B is more than 100",
+    no: ["Counts the rows where column A is East", "Adds all of column C, then adds 100", "Finds the first row where column B is more than 100"] },
+  { q: "Copilot wrote a reply to a customer complaint. What should you do before you send it?",
+    ok: "Check every fact, number, and promise, fix the tone, and remove private data",
+    no: ["Send it right away because AI does not make mistakes", "Only check the spelling", "Add more AI text so it looks longer"] },
 ];
 
-function BizCheck({ onDone, onCancel }) {
+function shuffle(a) {
+  const b = [...a];
+  for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; }
+  return b;
+}
+
+function BizCheck({ onPass, onFail, onCancel }) {
+  const [qs] = useState(() => shuffle(BIZ_CHECK).map((x) => ({ q: x.q, ok: x.ok, opts: shuffle([x.ok, ...x.no]) })));
   const [ans, setAns] = useState({});
   const [result, setResult] = useState(null);
-  const score = BIZ_CHECK.filter((x, i) => ans[i] === x.c).length;
   function submit() {
-    const pass = score >= 4;
+    const score = qs.filter((x, i) => ans[i] === x.ok).length;
+    const pass = score >= PASS;
     setResult({ pass, score });
-    if (pass) onDone();
+    if (pass) onPass(); else onFail();
   }
   return (
     <div className="panel" style={{ marginTop: 10 }}>
-      <strong>Quick check: 5 questions</strong>
-      <div className="small muted">Get 4 right to skip Business Tools.</div>
-      {BIZ_CHECK.map((x, i) => (
+      <strong>Business Tools check: 10 questions</strong>
+      <div className="small muted">Get {PASS} of 10 right to skip Business Tools. If you do not pass, you can try again in {RETRY_HOURS} hours.</div>
+      {qs.map((x, i) => (
         <fieldset key={i} style={{ border: 0, padding: 0, margin: "12px 0 0" }}>
           <legend style={{ fontWeight: 600, marginBottom: 4 }}>{i + 1}. {x.q}</legend>
-          {x.a.map((opt, j) => (
-            <label key={j} className="small" style={{ display: "block", padding: "3px 0" }}>
-              <input type="radio" name={"bc" + i} checked={ans[i] === j} onChange={() => setAns({ ...ans, [i]: j })} disabled={!!result} /> {opt}
+          {x.opts.map((opt) => (
+            <label key={opt} className="small" style={{ display: "block", padding: "3px 0" }}>
+              <input type="radio" name={"bc" + i} checked={ans[i] === opt} onChange={() => setAns({ ...ans, [i]: opt })} disabled={!!result} /> {opt}
             </label>
           ))}
         </fieldset>
@@ -62,13 +97,13 @@ function BizCheck({ onDone, onCancel }) {
       {result ? (
         <div style={{ marginTop: 12 }}>
           {result.pass
-            ? <strong>You got {result.score} of 5. Nice work! You can skip Business Tools. You can still take it anytime.</strong>
-            : <><strong>You got {result.score} of 5.</strong> <span>Business Tools will help you a lot. It runs next to your main track, so it won't slow you down.</span></>}
+            ? <strong>You got {result.score} of 10. Great job! You can skip Business Tools. You can still take it anytime.</strong>
+            : <><strong>You got {result.score} of 10.</strong> <span>You need {PASS} to skip. Business Tools runs next to your main track, so keep going. You can try the check again in {RETRY_HOURS} hours.</span></>}
           <div><button className="btn ghost small" style={{ marginTop: 8 }} onClick={onCancel}>Close</button></div>
         </div>
       ) : (
         <div className="row" style={{ marginTop: 12 }}>
-          <button className="btn" disabled={Object.keys(ans).length < 5} onClick={submit}>Check my answers</button>
+          <button className="btn" disabled={Object.keys(ans).length < qs.length} onClick={submit}>Check my answers</button>
           <button className="btn ghost" onClick={onCancel}>Cancel</button>
         </div>
       )}
@@ -91,7 +126,7 @@ function buildSystem(l) {
     "You are warm, upbeat, and direct. Use plain words a 5th grader can read. Keep replies under 120 words. Short paragraphs. Ask only ONE question at a time. Do not use em dashes.",
     `Learner's first name: ${l.name}. Use it.`,
     l.goal ? `Their goal: ${l.goal}.` : "You do not know their goal yet. Find out what they want: a first job, a better job, a career change, start a business, or a new skill.",
-    "Lumo Hubs plan: every learner takes Business Systems & Tools (Salesforce, Monday.com, Asana, HubSpot, Slack, Google Workspace, Excel, Copilot) at the same time as their main track. They work on both each week. For trades and vocational learners, explain that these tools help them find customers, book and track jobs, send quotes, and run their own business. Learners who already know the tools can tap 'I already know these' on their plan and pass a 5 question check to skip it.",
+    "Lumo Hubs plan: every learner takes Business Systems & Tools (Salesforce, Monday.com, Asana, HubSpot, Slack, Google Workspace, Excel, Copilot) at the same time as their main track. They work on both each week. For trades and vocational learners, explain that these tools help them find customers, book and track jobs, send quotes, and run their own business. Learners who already know the tools can tap 'I already know these' on their plan and pass a 10 question check to skip it.",
     bizStatus(l) === "tested-out" ? "This learner tested out of Business Tools. Do not push it." : bizStatus(l) === "on" ? `Business Tools: ${((l.progress || {})[BIZ] || []).length} of 6 weeks done.` : "",
     t ? `Their main track: ${t.name}. Weeks done: ${doneCount} of 6. ${nw ? "Next up: Week " + nw + "." : isVocational(t) ? "They finished the online basics. They are NOT finished yet: the next step is hands on, in person training. Tell them to tap 'Request my in person spot' on their plan." : "They finished all 6 weeks. Congratulate them and point them to their portfolio and the Talent Network for jobs."}` : "They have not picked a track yet.",
     t && isVocational(t) ? (l.inPerson === "requested" ? "They already requested their in person training spot. The Lumo Hubs team will contact them." : "") : "",
@@ -280,6 +315,8 @@ export function Guide({ openTrack }) {
   const nw = t ? nextWeek(l.progress, t.id) : null;
   const biz = bizStatus(l);
   const bizWeek = nextWeek(l.progress, BIZ);
+  const waitMs = l.bizCheckFailedAt ? l.bizCheckFailedAt + RETRY_HOURS * 3600000 - Date.now() : 0;
+  const locked = waitMs > 0 ? Math.ceil(waitMs / 3600000) : 0;
   const quick = !l.goal
     ? ["Get my first job", "Switch careers", "Start a business", "Learn AI for my job"]
     : !t ? ["Which track fits me?", "What jobs pay well?"] : ["What do I do this week?", "Quiz me", "I'm stuck"];
@@ -315,14 +352,16 @@ export function Guide({ openTrack }) {
               <span><strong>Business Tools:</strong> {bizWeek ? "Week " + bizWeek : "done"} <span className="small muted">(Salesforce, HubSpot, Monday.com and more)</span></span>
               <div className="row" style={{ gap: 8 }}>
                 {bizWeek ? <button className="btn small" onClick={() => openTrack(BIZ)}>Continue Week {bizWeek}</button> : <span className="chip green">Finished</span>}
-                {bizWeek === 1 && !checking && <button className="btn ghost small" onClick={() => setChecking(true)}>I already know these</button>}
+                {bizWeek === 1 && !checking && (locked
+                  ? <span className="small muted">Try the check again in {locked} hours</span>
+                  : <button className="btn ghost small" onClick={() => setChecking(true)}>I already know these</button>)}
               </div>
             </div>
           )}
           {biz === "tested-out" && (
             <div className="small muted" style={{ marginTop: 10 }}>Business Tools: you tested out. <button className="btn ghost small" onClick={() => saveLearner({ bizTools: "on", event: "rejoined business tools" })}>Take it anyway</button></div>
           )}
-          {checking && <BizCheck onDone={() => saveLearner({ bizTools: "tested-out", event: "tested out of business tools" })} onCancel={() => setChecking(false)} />}
+          {checking && <BizCheck onPass={() => saveLearner({ bizTools: "tested-out", event: "tested out of business tools" })} onFail={() => saveLearner({ bizCheckFailedAt: Date.now(), event: "failed business tools check" })} onCancel={() => setChecking(false)} />}
         </div>
       )}
 
