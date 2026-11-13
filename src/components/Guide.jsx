@@ -10,7 +10,7 @@ import { Icon, IconBadge } from "./Icons";
 
 let greetedThisVisit = false;
 
-const CATALOG = LIVE_TRACKS.map((t) => `${t.id}: ${t.name} (${t.sector})`).join("; ");
+const CATALOG = LIVE_TRACKS.map((t) => `${t.id}: ${t.name} (tools: ${(t.software || []).join(", ")})`).join("; ");
 
 function nextWeek(progress, trackId) {
   const done = (progress && progress[trackId]) || [];
@@ -38,6 +38,7 @@ function buildSystem(l) {
     `Tracks you can recommend (id: name): ${CATALOG}.`,
     "How to guide them: 1) learn their goal and what they already know, 2) recommend ONE or TWO tracks that fit and say why in one line each, 3) once they choose, tell them to press the button to start their week, 4) on later visits, cheer their progress and point to the next week.",
     "Special lines (the app reads these and hides them). When you learn their goal, add a line at the very end: GOAL: <their goal in under 12 words>. When you recommend a track, add a line at the very end for each: TRACK: <track id>. Use exact ids from the list.",
+    "Every track teaches the real company software listed with it. Business Systems & Tools (id business-systems) teaches Salesforce, Monday.com, Asana, HubSpot, Slack, and Google Workspace, the tools most new hires are expected to know. For students and job seekers in office, business, or tech fields, suggest it as a strong pick or a second track. When asked about a tool, name the track that teaches it.",
     "The app shows the full list of tracks under this chat, grouped by area, so the learner can browse and pick. When they seem unsure, tell them to look at the list below or name 2 or 3 tracks.",
     "Never make up jobs, pay, or promises. If you do not know, say so.",
   ].filter(Boolean).join(" ");
@@ -92,7 +93,20 @@ function Offer({ onStart, onAsk, busy, currentId }) {
   return (
     <div className="panel" style={{ marginTop: 14 }}>
       <h3 style={{ marginTop: 0 }}>What we offer</h3>
-      <p className="small muted" style={{ marginTop: -6 }}>{LIVE_TRACKS.length} free Foundation tracks in {SECTORS.length} areas. Tap one to see what you learn.</p>
+      <p className="small muted" style={{ marginTop: -6 }}>{LIVE_TRACKS.length} free Foundation tracks in {SECTORS.length} areas. Every track teaches the real software companies use. Tap one to see what you learn.</p>
+      <div className="panel tint" style={{ marginTop: 10 }}>
+        <div className="row" style={{ alignItems: "flex-start" }}>
+          <IconBadge name="Monitor" size={36} index={1} />
+          <div style={{ flex: 1 }}>
+            <strong>Top pick for job seekers: Business Systems & Tools</strong>
+            <div className="small" style={{ marginTop: 4 }}>Most new hires are expected to know these. Most graduates have never used them.</div>
+            <div className="row" style={{ flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+              {["Salesforce", "HubSpot", "Monday.com", "Asana", "Slack", "Google Workspace", "Excel", "Microsoft Copilot"].map((x) => <span key={x} className="chip">{x}</span>)}
+            </div>
+            <button className="btn small" style={{ marginTop: 10 }} onClick={() => setSel("business-systems")}>See this track</button>
+          </div>
+        </div>
+      </div>
       {SECTORS.map((sec) => {
         const list = LIVE_TRACKS.filter((x) => x.sector === sec.id);
         if (!list.length) return null;
@@ -114,6 +128,12 @@ function Offer({ onStart, onAsk, busy, currentId }) {
                     <strong>{t.name}</strong>
                     {t.tagline && <div className="small muted">{t.tagline}</div>}
                     {t.description && <p style={{ margin: "6px 0" }}>{t.description}</p>}
+                    {t.software && t.software.length > 0 && (
+                      <div style={{ margin: "6px 0" }}>
+                        <div className="small" style={{ fontWeight: 600 }}>Tools you will learn</div>
+                        <div className="row" style={{ flexWrap: "wrap", gap: 6, marginTop: 4 }}>{t.software.map((x) => <span key={x} className="chip">{x}</span>)}</div>
+                      </div>
+                    )}
                     <div className="small">6 weeks. First 2 weeks free to try.{t.avgPay ? " Typical pay: " + t.avgPay + "." : ""}</div>
                   </div>
                 </div>
