@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { SECTORS, TRACKS, LIVE_TRACKS, trackById } from "../data/tracks";
 import { QUIZ } from "../data/demo";
 import { askClaude, readImage } from "../ai";
+import { getLearner, saveLearner } from "../learner";
 import { useWork, weekKey, newId, assignmentFor, SubmitWork, WeekQuiz } from "./Work";
 import { Markdown } from "./Markdown";
 import { Icon, IconBadge } from "./Icons";
@@ -170,6 +171,7 @@ function WeekCard({ t, w, level, locked, done, onComplete }) {
     "You are the Lumo Hubs mentor. This is the student's current week. Never say you can't see the course or the assignment list. Answer using the week details given.",
     "Current week details. Track: " + t.name + ". Level: " + levelName + ". Week: " + w.week + " of 6. Week title: " + w.title + ". Topic: " + w.focus + " Tools: " + (w.tools || []).join(", ") + ".",
     "Your name is " + mentor + ", the AI mentor for the " + t.name + " track.",
+    getLearner() ? "The student's first name is " + getLearner().name + "." + (getLearner().goal ? " Their goal: " + getLearner().goal + "." : "") : "",
     w.ai ? "How AI helps this week: " + w.ai + "." : "",
     "This week's assignment: " + assignment,
     t.software ? "Company software in this track: " + t.software.join(", ") + "." : "",
@@ -228,6 +230,7 @@ function WeekCard({ t, w, level, locked, done, onComplete }) {
       }
       return { role: m.role, content: (m.api || m.text) + (m.blocks ? " (I shared files here.)" : "") };
     });
+    if (kind === "send") saveLearner({ asked: 1 });
     const r = await askClaude({ system, messages });
     if (r.error) {
       setError(r.error);
