@@ -134,6 +134,24 @@ export default async function handler(req, res) {
       return res.status(200).json({ learners: out });
     }
 
+    if (b.action === "instructor") {
+      if (!process.env.ADMIN_CODE || b.code !== process.env.ADMIN_CODE) return res.status(401).json({ error: "Wrong staff code." });
+      const keys = (await redis(["SMEMBERS", "learners"])) || [];
+      const out = [];
+      for (const k of keys) {
+        const l = await getJSON(k);
+        if (!l) continue;
+        if (!b.all && l.inPerson !== "requested") continue;
+        out.push({
+          name: l.name, email: l.email, goal: l.goal || "", trackId: l.trackId || "", bizTools: l.bizTools || "on",
+          inPerson: l.inPerson || "", inPersonAt: l.inPersonAt || null, createdAt: l.createdAt, lastSeen: l.lastSeen,
+          questions: l.questions || 0, progress: l.progress || {}, weeks: l.weeks || {},
+        });
+      }
+      out.sort((a, c) => (c.inPersonAt || c.lastSeen || 0) - (a.inPersonAt || a.lastSeen || 0));
+      return res.status(200).json({ learners: out });
+    }
+
     return res.status(400).json({ error: "Unknown action." });
   } catch (e) {
     return res.status(500).json({ error: "Could not reach learner storage. Try again in a minute." });
