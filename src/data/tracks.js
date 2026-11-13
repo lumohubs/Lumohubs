@@ -138,6 +138,8 @@ export const LIVE_TRACKS = TRACKS.filter((t) => t.status === "live");
 export const SOON_TRACKS = TRACKS.filter((t) => t.status === "soon");
 export const trackById = (id) => TRACKS.find((t) => t.id === id);
 
-// Vocational (trades) tracks: the online weeks are the basics. Learners finish only after
+// Hands on tracks (trades, healthcare, medical): the online weeks are the basics. Learners finish only after
 // hands on, in person training at a Lumo Hubs location or partner site.
-export const isVocational = (t) => !!t && t.sector === "trades";
+// Healthcare and medical careers also need in person training to finish.
+export const isMedical = (t) => !!t && (t.id === "healthcare" || /health|medical|nurs|radiolog|clinic/i.test(t.id + " " + t.name));
+export const isVocational = (t) => !!t && (t.sector === "trades" || isMedical(t));
