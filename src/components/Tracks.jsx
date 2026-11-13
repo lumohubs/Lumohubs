@@ -3,7 +3,7 @@ import { SECTORS, TRACKS, LIVE_TRACKS, trackById } from "../data/tracks";
 import { QUIZ } from "../data/demo";
 import { askClaude, readImage } from "../ai";
 import { getLearner, saveLearner } from "../learner";
-import { isVocational } from "../data/tracks";
+import { isVocational, isMedical } from "../data/tracks";
 import { useWork, weekKey, newId, assignmentFor, SubmitWork, WeekQuiz } from "./Work";
 import { Markdown } from "./Markdown";
 import { Icon, IconBadge } from "./Icons";
@@ -100,7 +100,7 @@ export function TrackDetail({ id, onBack, onJoinWaitlist, waitlist, progress, se
           <h3 style={{ marginTop: 0 }}>How you finish this track</h3>
           <div className="row" style={{ alignItems: "flex-start", gap: 16, flexWrap: "wrap" }}>
             <div style={{ flex: 1, minWidth: 220 }}><strong>Step 1: Online basics</strong><div className="small">6 weeks here in the app. Learn the basics, safety, and the tools.</div></div>
-            <div style={{ flex: 1, minWidth: 220 }}><strong>Step 2: Hands on, in person</strong><div className="small">Practice for real with an instructor at a Lumo Hubs location or partner site. This step is required.</div></div>
+            <div style={{ flex: 1, minWidth: 220 }}><strong>Step 2: Hands on, in person</strong><div className="small">Practice for real with an instructor at {isMedical(t) ? "a partner hospital, clinic, or Lumo Hubs location" : "a Lumo Hubs location or partner site"}. This step is required.</div></div>
           </div>
           <p className="small" style={{ margin: "10px 0 0" }}><strong>You finish this track after Step 2.</strong> We will contact you to set up your in person training when you finish the online basics.</p>
         </div>
@@ -195,7 +195,8 @@ function WeekCard({ t, w, level, locked, done, onComplete }) {
     "If the student asks their own question, answer it.",
     "Use plain language a beginner understands. Be practical and specific. Keep each reply under 220 words. Use short paragraphs, bold for key words, and simple lists. No tables. Do not use em dashes.",
     t.id === "healthcare" ? "This is for training only. Never give a medical diagnosis for a real patient. Say a licensed professional must decide." : "",
-    t.sector === "trades" ? "Always include safety steps. Tell the learner when a licensed professional is needed. This is the online basics part of the track. The learner is not finished or job ready until they complete hands on, in person training with an instructor. Never say they are fully trained from the online weeks alone." : "",
+    t.sector === "trades" ? "Always include safety steps. Tell the learner when a licensed professional is needed." : "",
+    isVocational(t) ? "This is the online basics part of the track. The learner is not finished or job ready until they complete hands on, in person training with an instructor. Never say they are fully trained from the online weeks alone." : "",
   ].filter(Boolean).join(" ");
 
   async function send(kind, sub) {
