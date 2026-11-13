@@ -100,6 +100,7 @@ export default async function handler(req, res) {
       const l = s.l;
       if (typeof p.goal === "string") l.goal = p.goal.slice(0, 300);
       if (typeof p.trackId === "string") l.trackId = p.trackId.slice(0, 60);
+      if (p.bizTools === "on" || p.bizTools === "tested-out") l.bizTools = p.bizTools;
       if (p.progress && typeof p.progress === "object") l.progress = p.progress;
       if (p.weeks && typeof p.weeks === "object") l.weeks = p.weeks;
       if (Array.isArray(p.chat)) l.chat = p.chat.slice(-MAX_CHAT).map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", text: String(m.text || "").slice(0, 3000), at: m.at || Date.now() }));
@@ -120,7 +121,7 @@ export default async function handler(req, res) {
         const l = await getJSON(k);
         if (!l) continue;
         out.push({
-          name: l.name, email: l.email, goal: l.goal, trackId: l.trackId, visits: l.visits,
+          name: l.name, email: l.email, goal: l.goal, trackId: l.trackId, bizTools: l.bizTools || "on", visits: l.visits,
           createdAt: l.createdAt, lastSeen: l.lastSeen,
           weeksDone: Object.values(l.progress || {}).reduce((n, a) => n + (Array.isArray(a) ? a.length : 0), 0),
           submitted: Object.values(l.weeks || {}).filter((w) => w.submission).length,
