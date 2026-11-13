@@ -18,6 +18,64 @@ function nextWeek(progress, trackId) {
   return null;
 }
 
+const BIZ = "business-systems";
+
+// Business Tools runs alongside every main track, unless the learner tests out.
+function bizStatus(l) {
+  if (l.bizTools === "tested-out") return "tested-out";
+  if (l.trackId === BIZ) return "main";
+  return "on";
+}
+
+// Quick check to test out of Business Tools. Pass with 4 of 5.
+const BIZ_CHECK = [
+  { q: "What is Salesforce mostly used for?", a: ["Tracking customers and sales", "Editing photos", "Writing code", "Filing taxes"], c: 0 },
+  { q: "On a Monday.com or Asana board, what is a task?", a: ["A chat message", "A piece of work with an owner and a due date", "A type of invoice", "A login page"], c: 1 },
+  { q: "In HubSpot, what is a deal?", a: ["A discount code", "A possible sale you are tracking", "A team meeting", "A saved email draft"], c: 1 },
+  { q: "What is the best way to ask a coworker a quick question in Slack?", a: ["Email the whole company", "Send a short, clear message to the right person or channel", "Wait for the weekly meeting", "Post it on social media"], c: 1 },
+  { q: "In Excel or Google Sheets, what does a pivot table do?", a: ["Changes the font", "Turns many rows into a short summary", "Sends the file to your boss", "Deletes empty cells"], c: 1 },
+];
+
+function BizCheck({ onDone, onCancel }) {
+  const [ans, setAns] = useState({});
+  const [result, setResult] = useState(null);
+  const score = BIZ_CHECK.filter((x, i) => ans[i] === x.c).length;
+  function submit() {
+    const pass = score >= 4;
+    setResult({ pass, score });
+    if (pass) onDone();
+  }
+  return (
+    <div className="panel" style={{ marginTop: 10 }}>
+      <strong>Quick check: 5 questions</strong>
+      <div className="small muted">Get 4 right to skip Business Tools.</div>
+      {BIZ_CHECK.map((x, i) => (
+        <fieldset key={i} style={{ border: 0, padding: 0, margin: "12px 0 0" }}>
+          <legend style={{ fontWeight: 600, marginBottom: 4 }}>{i + 1}. {x.q}</legend>
+          {x.a.map((opt, j) => (
+            <label key={j} className="small" style={{ display: "block", padding: "3px 0" }}>
+              <input type="radio" name={"bc" + i} checked={ans[i] === j} onChange={() => setAns({ ...ans, [i]: j })} disabled={!!result} /> {opt}
+            </label>
+          ))}
+        </fieldset>
+      ))}
+      {result ? (
+        <div style={{ marginTop: 12 }}>
+          {result.pass
+            ? <strong>You got {result.score} of 5. Nice work! You can skip Business Tools. You can still take it anytime.</strong>
+            : <><strong>You got {result.score} of 5.</strong> <span>Business Tools will help you a lot. It runs next to your main track, so it won't slow you down.</span></>}
+          <div><button className="btn ghost small" style={{ marginTop: 8 }} onClick={onCancel}>Close</button></div>
+        </div>
+      ) : (
+        <div className="row" style={{ marginTop: 12 }}>
+          <button className="btn" disabled={Object.keys(ans).length < 5} onClick={submit}>Check my answers</button>
+          <button className="btn ghost" onClick={onCancel}>Cancel</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function daysAgo(ts) {
   if (!ts) return null;
   return Math.floor((Date.now() - ts) / 86400000);
@@ -33,12 +91,14 @@ function buildSystem(l) {
     "You are warm, upbeat, and direct. Use plain words a 5th grader can read. Keep replies under 120 words. Short paragraphs. Ask only ONE question at a time. Do not use em dashes.",
     `Learner's first name: ${l.name}. Use it.`,
     l.goal ? `Their goal: ${l.goal}.` : "You do not know their goal yet. Find out what they want: a first job, a better job, a career change, start a business, or a new skill.",
-    t ? `Their track: ${t.name}. Weeks done: ${doneCount} of 6. ${nw ? "Next up: Week " + nw + "." : "They finished all 6 weeks. Congratulate them and point them to their portfolio and the Talent Network for jobs."}` : "They have not picked a track yet.",
+    "Lumo Hubs plan: every learner takes Business Systems & Tools (Salesforce, Monday.com, Asana, HubSpot, Slack, Google Workspace, Excel, Copilot) at the same time as their main track. They work on both each week. For trades and vocational learners, explain that these tools help them find customers, book and track jobs, send quotes, and run their own business. Learners who already know the tools can tap 'I already know these' on their plan and pass a 5 question check to skip it.",
+    bizStatus(l) === "tested-out" ? "This learner tested out of Business Tools. Do not push it." : bizStatus(l) === "on" ? `Business Tools: ${((l.progress || {})[BIZ] || []).length} of 6 weeks done.` : "",
+    t ? `Their main track: ${t.name}. Weeks done: ${doneCount} of 6. ${nw ? "Next up: Week " + nw + "." : "They finished all 6 weeks. Congratulate them and point them to their portfolio and the Talent Network for jobs."}` : "They have not picked a track yet.",
     ago != null ? `Their last visit was ${ago === 0 ? "earlier today" : ago + " days ago"}.` : "",
     `Tracks you can recommend (id: name): ${CATALOG}.`,
     "How to guide them: 1) learn their goal and what they already know, 2) recommend ONE or TWO tracks that fit and say why in one line each, 3) once they choose, tell them to press the button to start their week, 4) on later visits, cheer their progress and point to the next week.",
     "Special lines (the app reads these and hides them). When you learn their goal, add a line at the very end: GOAL: <their goal in under 12 words>. When you recommend a track, add a line at the very end for each: TRACK: <track id>. Use exact ids from the list.",
-    "Every track teaches the real company software listed with it. Business Systems & Tools (id business-systems) teaches Salesforce, Monday.com, Asana, HubSpot, Slack, and Google Workspace, the tools most new hires are expected to know. For students and job seekers in office, business, or tech fields, suggest it as a strong pick or a second track. When asked about a tool, name the track that teaches it.",
+    "Every track teaches the real company software listed with it. When asked about a tool, name the track that teaches it. Recommend a MAIN track that fits their goal; Business Tools comes with it automatically.",
     "The app shows the full list of tracks under this chat, grouped by area, so the learner can browse and pick. When they seem unsure, tell them to look at the list below or name 2 or 3 tracks.",
     "Never make up jobs, pay, or promises. If you do not know, say so.",
   ].filter(Boolean).join(" ");
@@ -98,8 +158,8 @@ function Offer({ onStart, onAsk, busy, currentId }) {
         <div className="row" style={{ alignItems: "flex-start" }}>
           <IconBadge name="Monitor" size={36} index={1} />
           <div style={{ flex: 1 }}>
-            <strong>Top pick for job seekers: Business Systems & Tools</strong>
-            <div className="small" style={{ marginTop: 4 }}>Most new hires are expected to know these. Most graduates have never used them.</div>
+            <strong>Every student gets Business Tools</strong>
+            <div className="small" style={{ marginTop: 4 }}>You learn these next to your main track, even in the trades. They help you get hired, find customers, and run jobs. Already know them? Take a quick check to skip.</div>
             <div className="row" style={{ flexWrap: "wrap", gap: 6, marginTop: 8 }}>
               {["Salesforce", "HubSpot", "Monday.com", "Asana", "Slack", "Google Workspace", "Excel", "Microsoft Copilot"].map((x) => <span key={x} className="chip">{x}</span>)}
             </div>
@@ -158,6 +218,7 @@ export function Guide({ openTrack }) {
   const [error, setError] = useState("");
   const [picks, setPicks] = useState([]);
   const [showOffer, setShowOffer] = useState(false);
+  const [checking, setChecking] = useState(false);
   const boxRef = useRef(null);
 
   useEffect(() => { if (l) setChat(l.chat || []); }, [l && l.email]);
@@ -188,7 +249,7 @@ export function Guide({ openTrack }) {
     greetedThisVisit = true;
     const isNew = !(l.chat && l.chat.length);
     const hidden = isNew
-      ? `(I just signed up. Greet me by name, say in one line what you can do for me, tell me I can browse all the tracks in the list below the chat, and ask what I want to get out of Lumo Hubs.)`
+      ? `(I just signed up. Greet me by name, say in one line what you can do for me, say that every Lumo student learns business tools like Salesforce next to their main track, tell me I can browse all the tracks in the list below the chat, and ask what I want to get out of Lumo Hubs.)`
       : `(I just came back. Welcome me back by name, remind me where I left off in one line, and tell me the next step.)`;
     ask(l.chat || [], hidden);
   }, [l]);
@@ -204,7 +265,7 @@ export function Guide({ openTrack }) {
   }
 
   function chooseTrack(id) {
-    saveLearner({ trackId: id, event: "picked " + id });
+    saveLearner({ trackId: id, bizTools: l.bizTools === "tested-out" ? "tested-out" : "on", event: "picked " + id });
     setPicks([]);
     openTrack(id);
   }
@@ -215,6 +276,8 @@ export function Guide({ openTrack }) {
 
   const t = l.trackId ? trackById(l.trackId) : null;
   const nw = t ? nextWeek(l.progress, t.id) : null;
+  const biz = bizStatus(l);
+  const bizWeek = nextWeek(l.progress, BIZ);
   const quick = !l.goal
     ? ["Get my first job", "Switch careers", "Start a business", "Learn AI for my job"]
     : !t ? ["Which track fits me?", "What jobs pay well?"] : ["What do I do this week?", "Quiz me", "I'm stuck"];
@@ -229,10 +292,26 @@ export function Guide({ openTrack }) {
         <button className="btn ghost small" onClick={() => { greetedThisVisit = false; setChat([]); signOut(); }}>Sign out</button>
       </div>
 
-      {t && nw && (
-        <div className="panel tint row between" style={{ marginBottom: 12 }}>
-          <span><strong>Next step:</strong> {t.name}, Week {nw}</span>
-          <button className="btn teal" onClick={() => openTrack(t.id)}>Continue Week {nw}</button>
+      {t && (
+        <div className="panel tint" style={{ marginBottom: 12 }}>
+          <h3 style={{ margin: "0 0 8px", fontSize: "1.05rem" }}>Your plan</h3>
+          <div className="row between" style={{ flexWrap: "wrap", gap: 8 }}>
+            <span><strong>Main track:</strong> {t.name}, {nw ? "Week " + nw : "done"}</span>
+            {nw ? <button className="btn teal small" onClick={() => openTrack(t.id)}>Continue Week {nw}</button> : <span className="chip green">Finished</span>}
+          </div>
+          {biz === "on" && (
+            <div className="row between" style={{ flexWrap: "wrap", gap: 8, marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(0,0,0,0.08)" }}>
+              <span><strong>Business Tools:</strong> {bizWeek ? "Week " + bizWeek : "done"} <span className="small muted">(Salesforce, HubSpot, Monday.com and more)</span></span>
+              <div className="row" style={{ gap: 8 }}>
+                {bizWeek ? <button className="btn small" onClick={() => openTrack(BIZ)}>Continue Week {bizWeek}</button> : <span className="chip green">Finished</span>}
+                {bizWeek === 1 && !checking && <button className="btn ghost small" onClick={() => setChecking(true)}>I already know these</button>}
+              </div>
+            </div>
+          )}
+          {biz === "tested-out" && (
+            <div className="small muted" style={{ marginTop: 10 }}>Business Tools: you tested out. <button className="btn ghost small" onClick={() => saveLearner({ bizTools: "on", event: "rejoined business tools" })}>Take it anyway</button></div>
+          )}
+          {checking && <BizCheck onDone={() => saveLearner({ bizTools: "tested-out", event: "tested out of business tools" })} onCancel={() => setChecking(false)} />}
         </div>
       )}
 
