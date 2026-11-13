@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
-import { LIVE_TRACKS, trackById } from "../data/tracks";
+import { LIVE_TRACKS, SECTORS, trackById } from "../data/tracks";
 import { askClaude } from "../ai";
 import { useLearner, signIn, signOut, saveLearner } from "../learner";
 import { Markdown } from "./Markdown";
-import { Icon } from "./Icons";
+import { Icon, IconBadge } from "./Icons";
 
 // The live coach. It knows each learner by name, remembers their goal, track, and progress,
 // greets them first, and guides them to the next step.
@@ -38,6 +38,7 @@ function buildSystem(l) {
     `Tracks you can recommend (id: name): ${CATALOG}.`,
     "How to guide them: 1) learn their goal and what they already know, 2) recommend ONE or TWO tracks that fit and say why in one line each, 3) once they choose, tell them to press the button to start their week, 4) on later visits, cheer their progress and point to the next week.",
     "Special lines (the app reads these and hides them). When you learn their goal, add a line at the very end: GOAL: <their goal in under 12 words>. When you recommend a track, add a line at the very end for each: TRACK: <track id>. Use exact ids from the list.",
+    "The app shows the full list of tracks under this chat, grouped by area, so the learner can browse and pick. When they seem unsure, tell them to look at the list below or name 2 or 3 tracks.",
     "Never make up jobs, pay, or promises. If you do not know, say so.",
   ].filter(Boolean).join(" ");
 }
@@ -84,6 +85,51 @@ function SignIn() {
   );
 }
 
+// Everything Lumo Hubs offers, grouped by area, so learners can pick instead of guessing.
+function Offer({ onStart, onAsk, busy, currentId }) {
+  const [sel, setSel] = useState(null);
+  const t = sel ? trackById(sel) : null;
+  return (
+    <div className="panel" style={{ marginTop: 14 }}>
+      <h3 style={{ marginTop: 0 }}>What we offer</h3>
+      <p className="small muted" style={{ marginTop: -6 }}>{LIVE_TRACKS.length} free Foundation tracks in {SECTORS.length} areas. Tap one to see what you learn.</p>
+      {SECTORS.map((sec) => {
+        const list = LIVE_TRACKS.filter((x) => x.sector === sec.id);
+        if (!list.length) return null;
+        return (
+          <div key={sec.id} style={{ marginTop: 12 }}>
+            <div className="small" style={{ fontWeight: 600, marginBottom: 6 }}>{sec.name}</div>
+            <div className="row" style={{ flexWrap: "wrap", gap: 8 }}>
+              {list.map((x) => (
+                <button key={x.id} className={"btn small " + (sel === x.id ? "" : "ghost")} onClick={() => setSel(sel === x.id ? null : x.id)} aria-pressed={sel === x.id}>
+                  <Icon name={x.icon} size={16} /> {x.name}{currentId === x.id ? " (yours)" : ""}
+                </button>
+              ))}
+            </div>
+            {t && t.sector === sec.id && (
+              <div className="panel tint" style={{ marginTop: 10 }}>
+                <div className="row" style={{ alignItems: "flex-start" }}>
+                  <IconBadge name={t.icon} size={36} />
+                  <div style={{ flex: 1 }}>
+                    <strong>{t.name}</strong>
+                    {t.tagline && <div className="small muted">{t.tagline}</div>}
+                    {t.description && <p style={{ margin: "6px 0" }}>{t.description}</p>}
+                    <div className="small">6 weeks. First 2 weeks free to try.{t.avgPay ? " Typical pay: " + t.avgPay + "." : ""}</div>
+                  </div>
+                </div>
+                <div className="row" style={{ marginTop: 10, flexWrap: "wrap" }}>
+                  <button className="btn teal" onClick={() => onStart(t.id)}>Start this track</button>
+                  <button className="btn ghost" disabled={busy} onClick={() => onAsk(t)}>Ask the coach about it</button>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function Guide({ openTrack }) {
   const { learner: l, ready, noStore } = useLearner();
   const [chat, setChat] = useState([]);
@@ -91,6 +137,7 @@ export function Guide({ openTrack }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [picks, setPicks] = useState([]);
+  const [showOffer, setShowOffer] = useState(false);
   const boxRef = useRef(null);
 
   useEffect(() => { if (l) setChat(l.chat || []); }, [l && l.email]);
@@ -121,7 +168,7 @@ export function Guide({ openTrack }) {
     greetedThisVisit = true;
     const isNew = !(l.chat && l.chat.length);
     const hidden = isNew
-      ? `(I just signed up. Greet me by name, say in one line what you can do for me, and ask what I want to get out of Lumo Hubs.)`
+      ? `(I just signed up. Greet me by name, say in one line what you can do for me, tell me I can browse all the tracks in the list below the chat, and ask what I want to get out of Lumo Hubs.)`
       : `(I just came back. Welcome me back by name, remind me where I left off in one line, and tell me the next step.)`;
     ask(l.chat || [], hidden);
   }, [l]);
@@ -195,6 +242,12 @@ export function Guide({ openTrack }) {
         <input className="input" style={{ flex: 1, minWidth: 0, width: "auto" }} value={input} onChange={(e) => setInput(e.target.value)} placeholder="Type a message to your coach" aria-label="Message to your coach" />
         <button className="btn" disabled={busy || !input.trim()}><Icon name="Rocket" size={16} /> Send</button>
       </form>
+
+      {t && !showOffer ? (
+        <button className="btn ghost small" style={{ marginTop: 14 }} onClick={() => setShowOffer(true)}>See all tracks we offer</button>
+      ) : (
+        <Offer currentId={t && t.id} busy={busy} onStart={chooseTrack} onAsk={(x) => { send("Tell me about the " + x.name + " track. Is it a good fit for me?"); setPicks([x.id]); }} />
+      )}
     </div>
   );
 }
