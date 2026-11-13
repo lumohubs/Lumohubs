@@ -175,9 +175,11 @@ export function WeekQuiz({ t, w, saved, onSave }) {
 
   function grade() {
     const score = qs.reduce((n, q, i) => n + (picks[i] === q.answer ? 1 : 0), 0);
-    const res = { score, total: qs.length, passed: score >= Math.ceil(qs.length * 0.66), date: new Date().toISOString() };
+    const missed = qs.filter((q, i) => picks[i] !== q.answer).map((q) => q.q);
+    const tries = ((saved && saved.tries) || (saved ? 1 : 0)) + 1;
+    const res = { score, total: qs.length, passed: score >= Math.ceil(qs.length * 0.66), date: new Date().toISOString(), missed };
     setResult(res);
-    onSave(saved && saved.score > score ? { ...saved, lastTry: res } : res);
+    onSave(saved && saved.score > score ? { ...saved, tries, lastTry: res } : { ...res, tries });
   }
 
   if (!qs) {

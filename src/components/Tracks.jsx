@@ -252,6 +252,8 @@ function WeekCard({ t, w, level, locked, done, onComplete }) {
       if (img) setPhoto(img);
     } else {
       setChat([...next, { role: "assistant", text: r.text }]);
+      // Keep the mentor's review with the written work, for instructors.
+      if (kind === "review") update((s) => ({ ...s, weeks: { ...s.weeks, [key]: { ...(s.weeks[key] || {}), review: { text: String(r.text).slice(0, 3000), date: new Date().toISOString() } } } }));
     }
     setBusy(false);
   }
