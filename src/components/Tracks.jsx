@@ -99,8 +99,8 @@ export function TrackDetail({ id, onBack, onJoinWaitlist, waitlist, progress, se
         <div className="panel tint section">
           <h3 style={{ marginTop: 0 }}>How you finish this track</h3>
           <div className="row" style={{ alignItems: "flex-start", gap: 16, flexWrap: "wrap" }}>
-            <div style={{ flex: 1, minWidth: 220 }}><strong>Step 1: Online basics</strong><div className="small">6 weeks here in the app. Learn the basics, safety, and the tools.</div></div>
-            <div style={{ flex: 1, minWidth: 220 }}><strong>Step 2: Hands on, in person</strong><div className="small">Practice for real with an instructor at {isMedical(t) ? "a partner hospital, clinic, or Lumo Hubs location" : "a Lumo Hubs location or partner site"}. This step is required.</div></div>
+            <div style={{ flex: 1, minWidth: 220 }}><strong>Step 1: Online basics</strong><div className="small">6 weeks here in the app. Your AI mentor teaches you the basics, safety, and the tools.</div></div>
+            <div style={{ flex: 1, minWidth: 220 }}><strong>Step 2: Hands on, in person</strong><div className="small">An instructor at {isMedical(t) ? "a partner hospital, clinic, or Lumo Hubs location" : "a Lumo Hubs location or partner site"} goes over the basics with you, answers your questions, then takes you further with real equipment. This step is required.</div></div>
           </div>
           <p className="small" style={{ margin: "10px 0 0" }}><strong>You finish this track after Step 2.</strong> We will contact you to set up your in person training when you finish the online basics.</p>
         </div>

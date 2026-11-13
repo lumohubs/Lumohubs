@@ -130,7 +130,7 @@ function buildSystem(l) {
     bizStatus(l) === "tested-out" ? "This learner tested out of Business Tools. Do not push it." : bizStatus(l) === "on" ? `Business Tools: ${((l.progress || {})[BIZ] || []).length} of 6 weeks done.` : "",
     t ? `Their main track: ${t.name}. Weeks done: ${doneCount} of 6. ${nw ? "Next up: Week " + nw + "." : isVocational(t) ? "They finished the online basics. They are NOT finished yet: the next step is hands on, in person training. Tell them to tap 'Request my in person spot' on their plan." : "They finished all 6 weeks. Congratulate them and point them to their portfolio and the Talent Network for jobs."}` : "They have not picked a track yet.",
     t && isVocational(t) ? (l.inPerson === "requested" ? "They already requested their in person training spot. The Lumo Hubs team will contact them." : "") : "",
-    "Hands on tracks (all trades like Plumbing, Electrical, HVAC, Solar, and Agriculture, plus Healthcare and Medical Careers) have two steps: online basics in the app, then required hands on, in person training with an instructor at a Lumo Hubs location or partner site, such as a partner hospital or clinic for healthcare. A learner finishes only after the in person step. Say this clearly when you recommend one of these tracks.",
+    "Hands on tracks (all trades like Plumbing, Electrical, HVAC, Solar, and Agriculture, plus Healthcare and Medical Careers) have two steps: online basics in the app, then required in person training at a Lumo Hubs location or partner site, such as a partner hospital or clinic for healthcare. The AI teaches the basics online. In person, an instructor goes over those basics with the learner, answers questions, and then takes them further with real equipment. A learner finishes only after the in person step. Say this clearly when you recommend one of these tracks.",
     ago != null ? `Their last visit was ${ago === 0 ? "earlier today" : ago + " days ago"}.` : "",
     `Tracks you can recommend (id: name): ${CATALOG}.`,
     "How to guide them: 1) learn their goal and what they already know, 2) recommend ONE or TWO tracks that fit and say why in one line each, 3) once they choose, tell them to press the button to start their week, 4) on later visits, cheer their progress and point to the next week.",
@@ -231,7 +231,7 @@ function Offer({ onStart, onAsk, busy, currentId }) {
                         <div className="row" style={{ flexWrap: "wrap", gap: 6, marginTop: 4 }}>{t.software.map((x) => <span key={x} className="chip">{x}</span>)}</div>
                       </div>
                     )}
-                    <div className="small">{isVocational(t) ? "Step 1: 6 weeks of online basics (first 2 weeks free to try). Step 2: hands on, in person training. You finish after Step 2." : "6 weeks. First 2 weeks free to try."}{t.avgPay ? " Typical pay: " + t.avgPay + "." : ""}</div>
+                    <div className="small">{isVocational(t) ? "Step 1: 6 weeks of online basics with your AI mentor (first 2 weeks free to try). Step 2: in person, an instructor goes over the basics with you and takes you further with real equipment. You finish after Step 2." : "6 weeks. First 2 weeks free to try."}{t.avgPay ? " Typical pay: " + t.avgPay + "." : ""}</div>
                   </div>
                 </div>
                 <div className="row" style={{ marginTop: 10, flexWrap: "wrap" }}>
@@ -341,7 +341,7 @@ export function Guide({ openTrack }) {
           {isVocational(t) && (
             <div className="small" style={{ marginTop: 6 }}>
               {nw
-                ? "Step 1 is online basics. Step 2 is hands on, in person training. You finish after Step 2."
+                ? "Step 1 is online basics with your AI mentor. Step 2 is in person: an instructor goes over the basics with you, then takes you further. You finish after Step 2."
                 : l.inPerson === "requested"
                   ? <span className="chip green">In person spot requested. We will contact you to set it up.</span>
                   : <span className="row" style={{ gap: 8, flexWrap: "wrap" }}><strong>Next: hands on, in person training (required to finish).</strong><button className="btn small" onClick={() => saveLearner({ inPerson: "requested", event: "requested in person " + t.id })}>Request my in person spot</button></span>}
