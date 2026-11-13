@@ -3,7 +3,7 @@ import {
   Home, BookOpen, Compass, IdCard, Rocket, Briefcase, Building2, Wrench, ClipboardList, Mic, TrendingUp,
   Banknote, Landmark, Zap, Users, BarChart3, KanbanSquare, PlugZap, Hammer, HardHat, Sprout, Snowflake, Sun,
   Car, Flame, HeartPulse, PenLine, Palette, Code, Megaphone, Video, Gamepad2, Monitor, ShoppingCart,
-  ShieldCheck, Camera, Lightbulb, FileText, X, Check, Circle,
+  ShieldCheck, Camera, Lightbulb, FileText, X, Check, Circle, ScanLine,
 } from "lucide-react";
 
 // Line icons by name. Data files store the name, so the look stays in one place.
@@ -11,7 +11,7 @@ const ICONS = {
   Home, BookOpen, Compass, IdCard, Rocket, Briefcase, Building2, Wrench, ClipboardList, Mic, TrendingUp,
   Banknote, Landmark, Zap, Users, BarChart3, KanbanSquare, PlugZap, Hammer, HardHat, Sprout, Snowflake, Sun,
   Car, Flame, HeartPulse, PenLine, Palette, Code, Megaphone, Video, Gamepad2, Monitor, ShoppingCart,
-  ShieldCheck, Camera, Lightbulb, FileText, X, Check,
+  ShieldCheck, Camera, Lightbulb, FileText, X, Check, ScanLine,
 };
 
 // Decorative by default. Pass a label only when the icon is the only thing naming a control.

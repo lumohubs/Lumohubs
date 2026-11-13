@@ -9,7 +9,7 @@ import { Markdown } from "./Markdown";
 import { Icon, IconBadge } from "./Icons";
 
 const PHOTO_SECTORS = ["trades"];
-const canPhoto = (t) => PHOTO_SECTORS.includes(t.sector) || t.id === "healthcare";
+const canPhoto = (t) => PHOTO_SECTORS.includes(t.sector) || isMedical(t);
 
 export function TrackLibrary({ onOpen, lang }) {
   const [sector, setSector] = useState("all");
@@ -194,7 +194,7 @@ function WeekCard({ t, w, level, locked, done, onComplete }) {
     "When the student submits work, review it against the assignment: what is good, what to improve, and a score out of 10.",
     "If the student asks their own question, answer it.",
     "Use plain language a beginner understands. Be practical and specific. Keep each reply under 220 words. Use short paragraphs, bold for key words, and simple lists. No tables. Do not use em dashes.",
-    t.id === "healthcare" ? "This is for training only. Never give a medical diagnosis for a real patient. Say a licensed professional must decide." : "",
+    isMedical(t) ? "This is for training only. Never give a medical diagnosis for a real patient. Say a licensed professional must decide." : "",
     t.sector === "trades" ? "Always include safety steps. Tell the learner when a licensed professional is needed." : "",
     isVocational(t) ? "This is the online basics part of the track. The learner is not finished or job ready until they complete hands on, in person training with an instructor. Never say they are fully trained from the online weeks alone." : "",
   ].filter(Boolean).join(" ");
@@ -443,7 +443,7 @@ function fallbackPicks(all) {
     "Banking and finance": ["banking", "data-analytics", "business-systems"],
     "Energy and utilities": ["energy", "solar", "electrical"],
     "Government and public service": ["government", "data-analytics", "ai-pm"],
-    Healthcare: ["healthcare", "data-analytics", "ai-hr"],
+    Healthcare: ["healthcare", "radiology", "data-analytics"],
     "Media and design": ["media-youtube", "freelance-design", "freelance-marketing"],
     "Trades and building": ["plumbing", "electrical", "hvac"],
     Technology: ["ai-cybersecurity", "freelance-tech", "data-analytics"],
