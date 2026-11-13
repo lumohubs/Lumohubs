@@ -116,6 +116,7 @@ const META = {
   banking: { sector: "sector", software: ["Microsoft Copilot", "Excel", "Power BI", "Salesforce Financial Services", "nCino"], example: "Turn a loan file into a one page credit memo with Copilot, then chart loan risk in Power BI." },
   government: { sector: "sector", software: ["Microsoft 365 Copilot", "Copilot Studio", "Power BI", "ServiceNow"], example: "Build an Arabic and English chatbot that answers citizen questions about a permit." },
   energy: { sector: "sector", software: ["SAP", "IBM Maximo", "AVEVA PI", "Power BI"], example: "Use sample sensor data to flag a pump likely to fail, then write the work order." },
+  radiology: { sector: "sector", software: ["DICOM viewer", "PACS", "Epic Radiant (training)"], example: "Pick the right view for a sample order, check a practice image for quality, and write up what you would fix." },
   healthcare: { sector: "sector", software: ["Epic (training)", "DICOM viewer", "Excel"], example: "Read a sample X ray with MedAI and write a plain language summary.", subTracks: ["Nursing", "Radiology", "Medical Lab", "Pharmacy"] },
   entrepreneurship: { sector: "sector", software: ["Notion", "Stripe", "Canva"], example: "Turn an idea into a one page plan and a first paying customer." },
   woodwork: { sector: "trades", status: "soon", software: ["SketchUp"], example: "Design a shelf in SketchUp and build it in the woodshop." },

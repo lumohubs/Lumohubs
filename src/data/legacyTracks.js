@@ -190,6 +190,25 @@ export const LEGACY_TRACKS = [
       { week: 6, title: "Certification & Career Prep", focus: "NCLEX prep for nurses, board exam basics for radiology and lab technicians, and building your clinical portfolio.", tools: ["NCLEX prep app", "CV template", "Clinical portfolio guide", "MedAI app"], ai: "AI runs you through board-style clinical scenario questions, identifies your weak areas, and builds a personalized study plan for your specific certification." },
     ]
   },
+  {
+    id: "radiology",
+    name: "Radiology & Medical Imaging",
+    icon: "ScanLine",
+    type: "vocational",
+    agent: "RadAI",
+    tagline: "See inside. Help doctors decide.",
+    description: "Start a career as a radiologic technologist. Learn anatomy, radiation safety, patient positioning, and how X ray, CT, MRI, and ultrasound work, with AI as your study partner. Online basics first, then hands on training with real equipment at a partner hospital or clinic.",
+    demand: "High",
+    avgPay: "$25 to $50/hr",
+    weeks: [
+      { week: 1, title: "Anatomy and Medical Words for Imaging", focus: "Bones, organs, and body planes. The medical words used on every imaging order and report.", tools: ["Anatomy atlas app", "Sample X ray library", "Flashcards", "RadAI app"], ai: "Upload a labeled anatomy chart or a sample X ray. AI names each part and quizzes you until you know them." },
+      { week: 2, title: "Radiation Safety", focus: "How X rays work, ALARA (as low as reasonably achievable), time, distance, and shielding, and protecting patients and yourself.", tools: ["Radiation safety guide", "Dosimeter basics", "Lead apron and shield guide", "RadAI app"], ai: "AI gives you real room scenarios and asks what you would do to keep the patient, the public, and you safe." },
+      { week: 3, title: "Patient Care and Positioning", focus: "Checking patient ID and orders, explaining the exam, moving patients safely, and the basic positions for chest, hand, knee, and spine X rays.", tools: ["Positioning guide", "Patient ID checklist", "Gloves and PPE", "RadAI app"], ai: "Describe or photograph a practice position. AI checks it against the standard view and tells you what to fix." },
+      { week: 4, title: "X Ray, CT, MRI, and Ultrasound", focus: "What each kind of scan shows, when doctors order it, and the safety rules for each, like metal and MRI.", tools: ["Modality comparison chart", "MRI safety screening form", "Sample scan library", "RadAI app"], ai: "AI shows you a sample order and asks which scan fits, then explains why." },
+      { week: 5, title: "Image Quality, PACS, and AI Tools", focus: "What makes an image good or poor, sending and finding images in PACS and DICOM viewers, and how hospitals use AI to flag images for review.", tools: ["DICOM viewer", "PACS training demo", "Image quality checklist", "RadAI app"], ai: "Upload a sample image. AI points out problems like motion, cut off anatomy, or the wrong exposure, and tells you how to retake it." },
+      { week: 6, title: "Certification Path and Career Prep", focus: "The steps to become a licensed technologist where you live, such as an accredited program and the ARRT exam in the US, plus your resume and clinical portfolio.", tools: ["Certification checklist", "Practice exam questions", "Resume template", "RadAI app"], ai: "AI runs board style practice questions, finds your weak spots, and builds your study plan." },
+    ]
+  },
   // ── FREELANCE ──
   {
     id: "freelance-writing",
