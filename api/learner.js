@@ -109,8 +109,13 @@ export default async function handler(req, res) {
       if (p.asked) l.questions = (l.questions || 0) + Math.min(Number(p.asked) || 0, 5);
       if (p.event) l.events = [...(l.events || []), { e: String(p.event).slice(0, 80), at: Date.now() }].slice(-100);
       l.lastSeen = Date.now();
-      // Keep each learner under about 400 KB.
-      if (JSON.stringify(l).length > 400000) l.chat = l.chat.slice(-10);
+      // Keep each learner under about 400 KB. Drop big file copies first, so the chat is kept.
+      if (JSON.stringify(l).length > 400000) {
+        for (const w of Object.values(l.weeks || {})) {
+          if (w && w.submission && Array.isArray(w.submission.files)) w.submission.files = w.submission.files.map((f) => ({ ...f, url: "" }));
+        }
+      }
+      if (JSON.stringify(l).length > 400000) l.chat = l.chat.slice(-20);
       await setJSON(s.key, l);
       return res.status(200).json({ ok: true });
     }

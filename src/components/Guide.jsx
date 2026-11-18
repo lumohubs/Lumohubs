@@ -254,6 +254,29 @@ function Offer({ onStart, onAsk, busy, currentId }) {
   );
 }
 
+// A short help guide, written for testers and new learners.
+function HelpGuide({ open }) {
+  return (
+    <details className="panel" style={{ marginBottom: 12 }} open={open}>
+      <summary style={{ cursor: "pointer", fontWeight: 600 }}>How to use Lumo (quick help)</summary>
+      <ol style={{ margin: "10px 0 0", paddingLeft: 20, lineHeight: 1.6 }}>
+        <li><strong>Talk to your coach.</strong> Type a question in the box at the bottom and tap <strong>Send</strong>. The coach answers right here.</li>
+        <li><strong>New line on a phone:</strong> the Enter key starts a new line. Tap <strong>Send</strong> when you are done. On a computer, press Enter to send and Shift + Enter for a new line.</li>
+        <li><strong>Pick a track.</strong> Tap <strong>See all tracks we offer</strong> under the chat. Tap a track to see what you learn, then tap <strong>Start this track</strong>.</li>
+        <li><strong>Do your week.</strong> On <strong>Your plan</strong>, tap <strong>Continue Week</strong>. Each week has work to submit, a 10 question quiz, and a written check.</li>
+        <li><strong>Business Tools</strong> (Salesforce, HubSpot, Excel and more) run next to your main track. Already know them? Tap <strong>I already know these</strong> to take a check.</li>
+        <li><strong>Come back anytime.</strong> Use the <strong>same email and PIN</strong> every time. Your coach and your chat are saved to that email on any phone or computer.</li>
+        <li><strong>Stuck?</strong> Tap <strong>I'm stuck</strong> or ask the coach. You can also message the Lumo Hubs team.</li>
+      </ol>
+    </details>
+  );
+}
+
+// Phones and tablets: Enter makes a new line. Computers: Enter sends, Shift + Enter makes a new line.
+const isTouch = () => {
+  try { return window.matchMedia("(pointer: coarse)").matches; } catch { return false; }
+};
+
 export function Guide({ openTrack }) {
   const { learner: l, ready, noStore } = useLearner();
   const [chat, setChat] = useState([]);
@@ -261,12 +284,29 @@ export function Guide({ openTrack }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [picks, setPicks] = useState([]);
-  const [showOffer, setShowOffer] = useState(false);
+  const [showOffer, setShowOffer] = useState(null); // null = default (open until they pick a track)
   const [checking, setChecking] = useState(false);
   const boxRef = useRef(null);
+  const lastRef = useRef(null);
+  const offerRef = useRef(null);
 
   useEffect(() => { if (l) setChat(l.chat || []); }, [l && l.email]);
-  useEffect(() => { if (boxRef.current) boxRef.current.scrollTop = boxRef.current.scrollHeight; }, [chat, busy]);
+  // When the coach answers, jump to the START of the answer so nobody has to scroll up.
+  // While the learner types or waits, keep the newest line in view.
+  useEffect(() => {
+    const box = boxRef.current;
+    if (!box) return;
+    const last = chat[chat.length - 1];
+    if (!busy && last && last.role === "assistant" && lastRef.current) {
+      box.scrollTop = Math.max(0, lastRef.current.offsetTop - 8);
+      const r = box.getBoundingClientRect();
+      if (r.top < 0 || r.top > window.innerHeight * 0.6) {
+        try { box.scrollIntoView({ behavior: "smooth", block: "start" }); } catch { box.scrollIntoView(); }
+      }
+    } else {
+      box.scrollTop = box.scrollHeight;
+    }
+  }, [chat, busy]);
 
   async function ask(history, hidden) {
     setBusy(true); setError("");
@@ -327,9 +367,11 @@ export function Guide({ openTrack }) {
   const quick = !l.goal
     ? ["Get my first job", "Switch careers", "Start a business", "Learn AI for my job"]
     : !t ? ["Which track fits me?", "What jobs pay well?"] : ["What do I do this week?", "Quiz me", "I'm stuck"];
+  const offerOpen = showOffer === null ? !t : showOffer;
 
   return (
     <div>
+      <HelpGuide open={!t && !(l.chat && l.chat.length > 2)} />
       <div className="row between" style={{ marginBottom: 12 }}>
         <div>
           <h2 style={{ margin: 0 }}>Hi {l.name}</h2>
@@ -372,11 +414,11 @@ export function Guide({ openTrack }) {
         </div>
       )}
 
-      <div className="ai-box" ref={boxRef} style={{ maxHeight: 460, minHeight: 200, overflowY: "auto", whiteSpace: "normal" }} aria-live="polite">
+      <div className="ai-box" ref={boxRef} style={{ position: "relative", maxHeight: 460, minHeight: 200, overflowY: "auto", whiteSpace: "normal" }} aria-live="polite">
         {chat.map((m, i) => (
-          <div key={i} style={{ margin: "0 0 12px", textAlign: m.role === "user" ? "end" : "start" }}>
+          <div key={i} ref={i === chat.length - 1 ? lastRef : null} style={{ margin: "0 0 12px", textAlign: m.role === "user" ? "end" : "start" }}>
             <div className="small muted">{m.role === "user" ? "You" : "Lumo coach"}</div>
-            {m.role === "user" ? <div>{m.text}</div> : <Markdown text={m.text} />}
+            {m.role === "user" ? <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div> : <Markdown text={m.text} />}
           </div>
         ))}
         {busy && <div className="muted small">Lumo coach is typing...</div>}
@@ -394,15 +436,40 @@ export function Guide({ openTrack }) {
         {quick.map((q) => <button key={q} className="btn ghost small" onClick={() => send(q)} disabled={busy}>{q}</button>)}
       </div>
 
-      <form className="row" style={{ marginTop: 10 }} onSubmit={(e) => { e.preventDefault(); send(); }}>
-        <input className="input" style={{ flex: 1, minWidth: 0, width: "auto" }} value={input} onChange={(e) => setInput(e.target.value)} placeholder="Type a message to your coach" aria-label="Message to your coach" />
+      <form className="row" style={{ marginTop: 10, alignItems: "flex-end" }} onSubmit={(e) => { e.preventDefault(); send(); }}>
+        <textarea
+          className="input"
+          rows={2}
+          style={{ flex: 1, minWidth: 0, width: "auto", minHeight: 48, maxHeight: 160, resize: "vertical" }}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            // Computers: Enter sends, Shift + Enter is a new line. Phones: Enter is always a new line.
+            if (e.key === "Enter" && !e.shiftKey && !isTouch() && !e.nativeEvent.isComposing) { e.preventDefault(); send(); }
+          }}
+          enterKeyHint="enter"
+          placeholder="Type a message to your coach"
+          aria-label="Message to your coach"
+        />
         <button className="btn" disabled={busy || !input.trim()}><Icon name="Rocket" size={16} /> Send</button>
       </form>
 
-      {t && !showOffer ? (
-        <button className="btn ghost small" style={{ marginTop: 14 }} onClick={() => setShowOffer(true)}>See all tracks we offer</button>
-      ) : (
-        <Offer currentId={t && t.id} busy={busy} onStart={chooseTrack} onAsk={(x) => { send("Tell me about the " + x.name + " track. Is it a good fit for me?"); setPicks([x.id]); }} />
+      <button
+        className="btn ghost small"
+        style={{ marginTop: 14 }}
+        aria-expanded={offerOpen}
+        onClick={() => {
+          const opening = !offerOpen;
+          setShowOffer(opening);
+          if (opening) setTimeout(() => { try { offerRef.current && offerRef.current.scrollIntoView({ behavior: "smooth", block: "start" }); } catch {} }, 50);
+        }}
+      >
+        {offerOpen ? "Hide the track list" : "See all tracks we offer"}
+      </button>
+      {offerOpen && (
+        <div ref={offerRef}>
+          <Offer currentId={t && t.id} busy={busy} onStart={chooseTrack} onAsk={(x) => { send("Tell me about the " + x.name + " track. Is it a good fit for me?"); setPicks([x.id]); }} />
+        </div>
       )}
     </div>
   );
