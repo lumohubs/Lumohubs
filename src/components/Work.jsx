@@ -338,6 +338,7 @@ export function WrittenCheck({ t, w, saved, onSave }) {
           ? "At least 3 questions ask for the steps of a real procedure in order. At least 3 ask about patient safety. At least 2 ask them to explain medical words in plain words."
           : "At least 4 questions ask for the exact steps to do a real task in this week's software tools, for example how to build a report that pulls certain data, saying what to click and what to enter. At least 2 ask how to fix a problem in the tool.",
       "The rest ask them to explain key ideas from this week and how they would use them at work.",
+      LEVEL_DEPTH[levelOf(getLearner())] + " Write every question at this level.",
       "Questions must test real understanding, not memorized words. Use plain words. Do not use em dashes.",
       'Reply ONLY with JSON: {"questions":["question 1","question 2", ... ten in all]}',
     ].join(" ");

@@ -153,6 +153,9 @@ function buildSystem(l) {
 // Only at the start of a line or list item, so normal sentences are not touched.
 const ID_LABEL = new RegExp("^(\\s*(?:[-*\\u2022]\\s+|\\d+[.)]\\s+)?)(?:\\*\\*)?(?:" + LIVE_TRACKS.map((t) => t.id.replace(/[-]/g, "\\-")).join("|") + ")\\s*:\\s*(?:\\*\\*)?\\s*", "gim");
 
+// Also catch ids anywhere in a line, like "**media-youtube**: YouTube ...".
+const ID_ANYWHERE = new RegExp("(?:\\*\\*)?\\b(?:" + LIVE_TRACKS.map((t) => t.id.replace(/[-]/g, "\\-")).join("|") + ")\\b(?:\\*\\*)?\\s*:\\s*", "gi");
+
 // Pull out GOAL: and TRACK: lines.
 function parseReply(text) {
   const goals = [], tracks = [], next = [];
@@ -164,7 +167,7 @@ function parseReply(text) {
     if (g) { goals.push(g[1].replace(/\*+$/, "").trim()); return false; }
     if (tr) { if (trackById(tr[1].toLowerCase())) tracks.push(tr[1].toLowerCase()); return false; }
     return true;
-  }).join("\n").replace(/\s*[\u2014\u2013]\s*/g, ", ").replace(ID_LABEL, "$1").trim();
+  }).join("\n").replace(/\s*[\u2014\u2013]\s*/g, ", ").replace(ID_LABEL, "$1").replace(ID_ANYWHERE, "").trim();
   return { clean, goal: goals[0], tracks: Array.from(new Set(tracks)).slice(0, 2), next: Array.from(new Set(next)).slice(0, 3) };
 }
 

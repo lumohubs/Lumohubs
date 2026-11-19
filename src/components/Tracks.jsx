@@ -4,7 +4,7 @@ import { QUIZ } from "../data/demo";
 import { askClaude, readImage } from "../ai";
 import { getLearner, saveLearner } from "../learner";
 import { isVocational, isMedical } from "../data/tracks";
-import { useWork, weekKey, newId, assignmentFor, SubmitWork, WeekQuiz, WrittenCheck } from "./Work";
+import { useWork, weekKey, newId, assignmentFor, SubmitWork, WeekQuiz, WrittenCheck, LEVEL_DEPTH, levelOf } from "./Work";
 import { Markdown } from "./Markdown";
 import { Icon, IconBadge } from "./Icons";
 
@@ -186,6 +186,7 @@ function WeekCard({ t, w, level, locked, done, onComplete }) {
     "Current week details. Track: " + t.name + ". Level: " + levelName + ". Week: " + w.week + " of 6. Week title: " + w.title + ". Topic: " + w.focus + " Tools: " + (w.tools || []).join(", ") + ".",
     "Your name is " + mentor + ", the AI mentor for the " + t.name + " track.",
     getLearner() ? "The student's first name is " + getLearner().name + "." + (getLearner().goal ? " Their goal: " + getLearner().goal + "." : "") : "",
+    getLearner() ? LEVEL_DEPTH[levelOf(getLearner())] + " Teach every answer, practice question, and review at this level." + (isVocational(t) ? " For trades and medical tracks, higher levels mean deeper diagnosis, the reasons behind each step, codes and standards, troubleshooting harder cases, and how to price or plan real jobs. Safety rules never get lighter." : "") : "",
     w.ai ? "How AI helps this week: " + w.ai + "." : "",
     "This week's assignment: " + assignment,
     t.software ? "Company software in this track: " + t.software.join(", ") + "." : "",

@@ -5,6 +5,8 @@ import { Markdown } from "./Markdown";
 import { IconBadge } from "./Icons";
 import { Avatar } from "./Talent";
 import { Stat } from "./Dashboards";
+import { getLearner } from "../learner";
+import { levelOf, LEVELS } from "./Work";
 
 export function HubBooking({ role }) {
   const [space, setSpace] = useState(HUB_SPACES[0].id);
@@ -138,8 +140,18 @@ function HirePlumber() {
 
   async function check() {
     setBusy(true); setDiag(""); setErr("");
+    // Signed in Lumo learners also get a trainee section that matches their level.
+    const l = getLearner();
+    const lv = l ? levelOf(l) : 0;
+    const trainee = !l ? "" : [
+      " After the homeowner part, add a section called **For trainees (" + LEVELS[lv - 1] + ")**.",
+      lv === 1 ? "Explain the likely cause in simple words, name the tools a plumber would bring, and list the main safety steps." : "",
+      lv === 2 ? "Give the likely causes in order of how common they are, how a plumber would test for each, the parts and tools needed, the repair steps in order, and common mistakes." : "",
+      lv === 3 ? "Go deep like a senior plumber: how to tell similar problems apart, pipe materials and sizes involved, code and permit points to check, repair or replace trade offs, how to quote the job (time, parts, labor), and when to bring in a licensed master plumber." : "",
+      " Keep the whole answer under " + (lv === 1 ? 260 : 380) + " words.",
+    ].join(" ");
     const r = await askClaude({
-      system: "You are PlumberFix AI. You help homeowners understand a plumbing problem before a plumber arrives. Plain language, under 160 words, no dashes. Give: what it likely is, how urgent it is (low, medium, or urgent), one safe thing to do now, and a rough price range in QAR. Say a licensed plumber will confirm.",
+      system: "You are PlumberFix AI. You help homeowners understand a plumbing problem before a plumber arrives. Plain language, " + (l ? "" : "under 160 words, ") + "no dashes. Give: what it likely is, how urgent it is (low, medium, or urgent), one safe thing to do now, and a rough price range in QAR. Say a licensed plumber will confirm." + trainee,
       prompt: `Problem: ${desc || "see photo"}. Area: ${area}.`,
       image: photo,
     });
