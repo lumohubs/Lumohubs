@@ -168,6 +168,7 @@ function WeekCard({ t, w, level, locked, done, onComplete }) {
   const submitted = !!rec.submission;
   const quizPassed = !!(rec.quiz && rec.quiz.passed);
   const writtenPassed = !!(rec.written && rec.written.passed);
+  const [testingOut, setTestingOut] = useState(false);
 
   useEffect(() => {
     if (boxRef.current) boxRef.current.scrollTop = boxRef.current.scrollHeight;
@@ -310,6 +311,32 @@ function WeekCard({ t, w, level, locked, done, onComplete }) {
                 <span className={"chip " + (quizPassed ? "green" : "")}>{quizPassed ? <><Icon name="Check" size={14} /> Quiz passed</> : "Quiz: to do"}</span>
                 <span className={"chip " + (writtenPassed ? "green" : "")}>{writtenPassed ? <><Icon name="Check" size={14} /> Written check passed</> : "Written check: to do"}</span>
               </div>
+
+              {!done && !rec.testedOut && (
+                <div className="panel" style={{ marginTop: 12 }}>
+                  {!testingOut ? (
+                    <div className="row between" style={{ flexWrap: "wrap", gap: 8 }}>
+                      <span className="small"><strong>Already know this week?</strong> Pass a 10 question test (8 right) to skip it.</span>
+                      <button className="btn ghost small" onClick={() => setTestingOut(true)}>Test out of Week {w.week}</button>
+                    </div>
+                  ) : (
+                    <>
+                      <h4 style={stepTitle}>Test out of Week {w.week}</h4>
+                      <div className="small muted" style={{ marginBottom: 8 }}>10 questions at your level. Get 8 right and this week is marked done. Miss it and just do the week as normal.</div>
+                      <WeekQuiz t={t} w={{ ...w, week: "T" + w.week, title: "Week " + w.week + ": " + w.title }} saved={null} label={"Start the Week " + w.week + " test out"}
+                        onSave={(q) => {
+                          if (q.passed) {
+                            update((st) => ({ ...st, weeks: { ...st.weeks, [key]: { ...(st.weeks[key] || {}), testedOut: { score: q.score, date: q.date } } } }));
+                            saveLearner({ event: "tested out of " + t.id + " week " + w.week });
+                            onComplete && onComplete();
+                          }
+                        }} />
+                      <button className="btn ghost small" style={{ marginTop: 8 }} onClick={() => setTestingOut(false)}>Close</button>
+                    </>
+                  )}
+                </div>
+              )}
+              {rec.testedOut && <div className="chip green" style={{ marginTop: 12 }}>Tested out of this week: {rec.testedOut.score} of 10</div>}
 
               {t.id === "business-systems" && w.week === 1 && (
                 <div className="panel" style={{ marginTop: 12, borderLeft: "4px solid var(--teal)" }}>

@@ -329,7 +329,7 @@ function HelpGuide({ open }) {
         <li><strong>Your profile.</strong> Tap <strong>My profile</strong> at the top to change your name, goal, about me, or photo.</li>
         <li><strong>New line on a phone:</strong> the Enter key starts a new line. Tap <strong>Send</strong> when you are done. On a computer, press Enter to send and Shift + Enter for a new line.</li>
         <li><strong>Pick a track.</strong> Tap <strong>See all tracks we offer</strong> under the chat. Tap a track to see what you learn, then tap <strong>Start this track</strong>.</li>
-        <li><strong>Do your week.</strong> On <strong>Your plan</strong>, tap <strong>Continue Week</strong>. Each week has work to submit, a 10 question quiz, and a written check.</li>
+        <li><strong>Do your week.</strong> On <strong>Your plan</strong>, tap <strong>Continue Week</strong>. Each week has work to submit, a 10 question quiz, and a written check. Already know a week? Tap <strong>Test out of Week</strong> and pass 8 of 10 to skip it.</li>
         <li><strong>Business Tools</strong> (Salesforce, HubSpot, Excel and more) run next to your main track. Already know them? Tap <strong>I already know these</strong> to take a check.</li>
         <li><strong>Come back anytime.</strong> Use the <strong>same email and PIN</strong> every time. Your coach and your chat are saved to that email on any phone or computer.</li>
         <li><strong>Stuck?</strong> Tap <strong>I'm stuck</strong> or ask the coach. You can also message the Lumo Hubs team.</li>
