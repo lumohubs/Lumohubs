@@ -260,7 +260,7 @@ function Offer({ onStart, onAsk, busy, currentId }) {
 }
 
 // Round profile photo, or the first letter of the name if there is no photo.
-function Avatar({ l, size = 44 }) {
+export function Avatar({ l, size = 44 }) {
   const style = { width: size, height: size, borderRadius: "50%", flex: "0 0 auto", objectFit: "cover" };
   return l.photo
     ? <img src={l.photo} alt="" style={style} />
@@ -268,7 +268,7 @@ function Avatar({ l, size = 44 }) {
 }
 
 // "My profile": the learner can change their name, goal, a short about me, and their photo.
-function Profile({ l, onClose }) {
+export function ProfileEditor({ l, onClose }) {
   const [name, setName] = useState(l.name || "");
   const [goal, setGoal] = useState(l.goal || "");
   const [about, setAbout] = useState(l.about || "");
@@ -470,7 +470,7 @@ export function Guide({ openTrack }) {
         </div>
       </div>
 
-      {editing && <Profile l={l} onClose={() => setEditing(false)} />}
+      {editing && <ProfileEditor l={l} onClose={() => setEditing(false)} />}
 
       {t && (
         <div className="panel tint" style={{ marginBottom: 12 }}>

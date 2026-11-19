@@ -100,7 +100,7 @@ export function BusinessBuilder() {
         <button className="btn" style={{ marginTop: 12 }} disabled={busy || !idea.trim()} onClick={build}>{busy ? "Building your plan..." : "Build my launch plan"}</button>
         {err && <div className="err">{err}</div>}
       </div>
-      {out && <div className="ai-box" style={{ marginTop: 16 }}><Markdown text={out} /><div className="ai-src">AI Business Builder, powered by Claude</div></div>}
+      {out && <div className="ai-box" style={{ marginTop: 16 }}><Markdown text={out} /><div className="ai-src">AI Business Builder</div></div>}
     </div>
   );
 }
@@ -174,7 +174,7 @@ function HirePlumber() {
         {photo && <img src={photo.url} alt="Your plumbing problem" style={{ maxHeight: 150, borderRadius: 8, marginTop: 10 }} />}
         <button className="btn teal" style={{ marginTop: 12 }} disabled={busy || (!desc.trim() && !photo)} onClick={check}>{busy ? "Checking..." : "Check it with AI"}</button>
         {err && <div className="err">{err}</div>}
-        {diag && <div className="ai-box"><Markdown text={diag} /><div className="ai-src">PlumberFix AI, powered by Claude</div></div>}
+        {diag && <div className="ai-box"><Markdown text={diag} /><div className="ai-src">PlumberFix AI</div></div>}
       </div>
       <div className="panel">
         <h3>Plumbers near you</h3>

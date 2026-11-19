@@ -4,6 +4,8 @@ import { trackById } from "../data/tracks";
 import { askClaude } from "../ai";
 import { Markdown } from "./Markdown";
 import { MyPortfolio } from "./Work";
+import { useLearner } from "../learner";
+import { Avatar as LearnerAvatar, ProfileEditor } from "./Guide";
 
 export const employerById = (id) => EMPLOYERS.find((e) => e.id === id);
 
@@ -181,20 +183,28 @@ export function Avatar({ name, size = 40 }) {
   );
 }
 
-export function Profile({ me, progress }) {
+export function Profile({ me: sample, progress }) {
+  // Signed in learners see and edit their OWN profile. Everyone else sees the sample profile.
+  const { learner: l } = useLearner();
+  const [editing, setEditing] = useState(false);
+  const real = !!l;
+  const me = real
+    ? { name: l.name || "Learner", headline: l.about || l.goal || "Lumo Hubs learner", city: "", open: [], skills: [], projects: [],
+        track: l.trackId && trackById(l.trackId) ? l.trackId : "", level: "Foundation", progress: 0, attendance: 0 }
+    : sample;
   const [busy, setBusy] = useState(false);
   const [tool, setTool] = useState("");
   const [out, setOut] = useState("");
-  const track = trackById(me.track);
-  const weeksDone = (progress[me.track] || []).length;
+  const track = me.track ? trackById(me.track) : null;
+  const weeksDone = me.track ? (progress[me.track] || []).length : 0;
 
   async function help(kind) {
     setTool(kind); setBusy(true); setOut("");
-    const facts = `Name: ${me.name}. Headline: ${me.headline}. Track: ${track.name}. Skills: ${me.skills.join(", ")}. Projects: ${me.projects.join("; ")}.`;
+    const facts = `Name: ${me.name}. Headline: ${me.headline}. Track: ${track ? track.name : "not picked yet"}. Skills: ${me.skills.join(", ")}. Projects: ${me.projects.join("; ")}.`;
     const prompts = {
       resume: `Write a short resume summary (4 sentences) and 4 resume bullets for this person. Plain, honest, no dashes. Only use these facts. ${facts}`,
-      cover: `Write a short cover letter (under 170 words) for a ${track.name} role. Plain human voice, no dashes. Only use these facts. ${facts}`,
-      interview: `Give 4 likely interview questions for a ${track.name} role and a strong sample answer for each, 2 sentences each, using only these facts. ${facts}`,
+      cover: `Write a short cover letter (under 170 words) for a ${track ? track.name : "entry level"} role. Plain human voice, no dashes. Only use these facts. ${facts}`,
+      interview: `Give 4 likely interview questions for a ${track ? track.name : "entry level"} role and a strong sample answer for each, 2 sentences each, using only these facts. ${facts}`,
     };
     const r = await askClaude({ system: "You are a career coach at Lumo Hubs. Plain language. Never invent experience.", prompt: prompts[kind] });
     setOut(r.error || r.text); setBusy(false);
@@ -202,37 +212,40 @@ export function Profile({ me, progress }) {
 
   return (
     <div>
-      <div className="row" style={{ gap: 16 }}>
-        <Avatar name={me.name} size={64} />
-        <div>
+      {!real && <div className="panel tint small" style={{ marginBottom: 12 }}>This is a sample profile. Sign in on <strong>My coach</strong> to see and edit your own.</div>}
+      <div className="row" style={{ gap: 16, flexWrap: "wrap" }}>
+        {real ? <LearnerAvatar l={l} size={64} /> : <Avatar name={me.name} size={64} />}
+        <div style={{ flex: 1 }}>
           <h2 style={{ margin: 0 }}>{me.name}</h2>
           <div className="muted">{me.headline}</div>
-          <div className="small muted">{me.city}</div>
+          {me.city && <div className="small muted">{me.city}</div>}
         </div>
+        {real && <button className="btn small" onClick={() => setEditing(!editing)} aria-expanded={editing}>Edit my profile</button>}
       </div>
-      <div style={{ marginTop: 12 }}>{me.open.length ? me.open.map((o) => <span key={o} className="chip green">Open to {o.toLowerCase()}</span>) : <span className="chip">Not looking right now</span>}</div>
+      {real && editing && <div style={{ marginTop: 12 }}><ProfileEditor l={l} onClose={() => setEditing(false)} /></div>}
+      {!real && <div style={{ marginTop: 12 }}>{me.open.length ? me.open.map((o) => <span key={o} className="chip green">Open to {o.toLowerCase()}</span>) : <span className="chip">Not looking right now</span>}</div>}
 
       <div className="grid g2 section">
         <div className="panel">
           <h3>Verified skills</h3>
           <p className="small muted">Earned in Lumo tracks and checked by instructors. Not self reported.</p>
-          {me.skills.map((s) => <span key={s} className="chip teal">{s}</span>)}
+          {me.skills.length ? me.skills.map((s) => <span key={s} className="chip teal">{s}</span>) : <div className="small muted">Your skills show here after an instructor checks your work.</div>}
         </div>
         <div className="panel">
           <h3>Training</h3>
-          <div><strong>{track.name}</strong>, {me.level}</div>
-          <div className="small muted">{Math.max(me.progress, Math.round((weeksDone / 6) * 100))}% complete, {me.attendance}% attendance</div>
+          {track ? <div><strong>{track.name}</strong>, {me.level}</div> : <div className="small muted">No track yet. Pick one on My coach.</div>}
+          <div className="small muted">{Math.max(me.progress, Math.round((weeksDone / 6) * 100))}% complete{real ? "" : `, ${me.attendance}% attendance`}</div>
           <div className="bar" style={{ marginTop: 8 }}><span style={{ width: `${Math.max(me.progress, (weeksDone / 6) * 100)}%` }} /></div>
           <p className="small" style={{ marginTop: 10 }}>Certificate issued by a partner university when the track is complete.</p>
         </div>
       </div>
 
-      <MyPortfolio defaultTrack={me.track} />
+      <MyPortfolio defaultTrack={me.track || (sample && sample.track)} />
 
       <h3>Sample projects</h3>
       <div className="grid g3">
         {me.projects.length ? me.projects.map((p) => (
-          <div key={p} className="panel tint"><strong>{p}</strong><div className="small muted" style={{ marginTop: 6 }}>{track.name} project</div></div>
+          <div key={p} className="panel tint"><strong>{p}</strong><div className="small muted" style={{ marginTop: 6 }}>{track ? track.name : "Lumo"} project</div></div>
         )) : <div className="empty">No projects yet. Finish Week 6 to add your first one.</div>}
       </div>
 
@@ -244,7 +257,7 @@ export function Profile({ me, progress }) {
           <button className="btn small" disabled={busy} onClick={() => help("interview")}>Practice interview questions</button>
         </div>
         {busy && <p className="muted small" style={{ marginTop: 10 }}>Writing your {tool}...</p>}
-        {out && <div className="ai-box"><Markdown text={out} /><div className="ai-src">Career coach, powered by Claude</div></div>}
+        {out && <div className="ai-box"><Markdown text={out} /><div className="ai-src">Lumo career coach</div></div>}
       </div>
     </div>
   );
