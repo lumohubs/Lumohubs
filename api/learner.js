@@ -99,6 +99,11 @@ export default async function handler(req, res) {
       const p = b.patch || {};
       const l = s.l;
       if (typeof p.goal === "string") l.goal = p.goal.slice(0, 300);
+      // Profile the learner can edit: first name, a short "about me", and a small photo.
+      if (typeof p.name === "string" && p.name.trim()) l.name = p.name.trim().slice(0, 60);
+      if (typeof p.about === "string") l.about = p.about.slice(0, 300);
+      if (p.photo === "") l.photo = "";
+      else if (typeof p.photo === "string" && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(p.photo) && p.photo.length < 80000) l.photo = p.photo;
       if (typeof p.trackId === "string") l.trackId = p.trackId.slice(0, 60);
       if (p.bizTools === "on" || p.bizTools === "tested-out") l.bizTools = p.bizTools;
       if (p.bizCheckFailedAt) l.bizCheckFailedAt = Date.now();

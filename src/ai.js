@@ -23,6 +23,30 @@ export async function askClaude({ system, prompt, image, messages, maxTokens = 1
   }
 }
 
+// Shrink a photo before sending it, so it uploads fast on a phone and fits the server limit.
+// Returns { data (base64), type, url (data URL) } as a JPEG no bigger than max x max.
+export function shrinkImage(file, max = 1024, quality = 0.8) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const scale = Math.min(1, max / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+        const c = document.createElement("canvas");
+        c.width = w; c.height = h;
+        c.getContext("2d").drawImage(img, 0, 0, w, h);
+        const url = c.toDataURL("image/jpeg", quality);
+        resolve({ data: url.split(",")[1], type: "image/jpeg", name: file.name, url });
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 export function readImage(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
