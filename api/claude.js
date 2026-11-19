@@ -30,10 +30,11 @@ function toOpenMessages(system, messages) {
   return out;
 }
 
-// Small open models only (10B or fewer). Each model has its own rate limit on the gateway,
-// so when one is busy we move to the next. Only Ministral 8B reads photos.
+// Small open models only (10B or fewer), and no frontier model families (no GPT, Claude,
+// Gemini, or Llama). Each model has its own rate limit on the gateway, so when one is busy
+// we move to the next. Only Ministral 8B reads photos.
 const MAIN = process.env.SMALL_MODEL || "mistral/ministral-8b";
-const BACKUPS = ["meta/llama-3.1-8b", "nvidia/nemotron-nano-9b-v2"];
+const BACKUPS = ["nvidia/nemotron-nano-9b-v2", "mistral/ministral-3b"];
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const hasImage = (messages) => messages.some((m) => Array.isArray(m.content) && m.content.some((b) => b.type === "image"));
 
