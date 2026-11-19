@@ -1,11 +1,11 @@
 import { LEGACY_TRACKS } from "./legacyTracks";
 
 export const SECTORS = [
-  { id: "trades", name: "Trades", nameAr: "المهن الفنية" },
-  { id: "creative", name: "Creative and Media", nameAr: "الإبداع والإعلام" },
-  { id: "business", name: "Business and Operations", nameAr: "الأعمال والعمليات" },
-  { id: "technology", name: "Technology", nameAr: "التكنولوجيا" },
-  { id: "sector", name: "Sector tracks", nameAr: "مسارات القطاعات" },
+  { id: "trades", name: "Trades", short: "Trades", nameAr: "المهن الفنية" },
+  { id: "creative", name: "Creative and Media", short: "Creative", nameAr: "الإبداع والإعلام" },
+  { id: "business", name: "Business and Operations", short: "Business", nameAr: "الأعمال والعمليات" },
+  { id: "technology", name: "Technology", short: "Tech", nameAr: "التكنولوجيا" },
+  { id: "sector", name: "Sector tracks", short: "Sectors", nameAr: "مسارات القطاعات" },
 ];
 
 // New professional tracks built for Qatar's educated workforce.

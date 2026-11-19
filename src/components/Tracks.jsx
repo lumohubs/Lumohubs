@@ -28,7 +28,7 @@ export function TrackLibrary({ onOpen, lang }) {
         <div className="seg" role="tablist" aria-label="Filter by sector">
           <button className={sector === "all" ? "on" : ""} onClick={() => setSector("all")}>All</button>
           {SECTORS.map((s) => (
-            <button key={s.id} className={sector === s.id ? "on" : ""} onClick={() => setSector(s.id)}>{lang === "ar" ? s.nameAr : s.name}</button>
+            <button key={s.id} className={sector === s.id ? "on" : ""} onClick={() => setSector(s.id)}>{lang === "ar" ? s.nameAr : (s.short || s.name)}</button>
           ))}
         </div>
         <input className="input" style={{ maxWidth: 240 }} placeholder="Search tracks" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search tracks" />

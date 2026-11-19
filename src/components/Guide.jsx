@@ -476,11 +476,10 @@ export function Guide({ openTrack }) {
   const quick = !l.goal
     ? ["Get my first job", "Switch careers", "Start a business", "Learn AI for my job"]
     : !t ? ["Which track fits me?", "What jobs pay well?"] : ["What do I do this week?", "Quiz me", "I'm stuck"];
-  const offerOpen = showOffer === null ? !t : showOffer;
+  const offerOpen = showOffer === null ? false : showOffer;
 
   return (
     <div>
-      <HelpGuide open={!t && !(l.chat && l.chat.length > 2)} />
       <div className="row between" style={{ marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
         <div className="row" style={{ gap: 10, alignItems: "center" }}>
           <Avatar l={l} />
@@ -497,6 +496,8 @@ export function Guide({ openTrack }) {
       </div>
 
       {editing && <ProfileEditor l={l} onClose={() => setEditing(false)} />}
+
+      <HelpGuide open={false} />
 
       {t && (
         <div className="panel tint" style={{ marginBottom: 12 }}>
