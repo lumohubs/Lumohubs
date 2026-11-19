@@ -402,7 +402,7 @@ export function Guide({ openTrack }) {
 
   async function ask(history, hidden, image) {
     setBusy(true); setError(""); setNexts([]);
-    const msgs = history.slice(-12).map((m) => ({ role: m.role, content: m.text }));
+    const msgs = history.slice(image ? -1 : -12).map((m) => ({ role: m.role, content: m.text }));
     // A photo goes only with the newest message, so older photos are not sent again.
     if (image && msgs.length) {
       const last = msgs[msgs.length - 1];
