@@ -27,7 +27,7 @@ function toOpenMessages(system, messages) {
     if (m.role === "assistant") out.push({ role: "assistant", content: parts.map((p) => p.text || "").join("\n") });
     else out.push({ role: "user", content: parts.length ? parts : "" });
   }
-  if (out.some((x) => Array.isArray(x.content) && x.content.some((p) => p.type === "image_url"))) out[0].content += "\n\nPHOTO RULES: First decide if the leaking pipe is a DRAIN pipe (wide pipe going down from the sink, the curved trap, or the pipe into the wall; it carries used water out) or a WATER SUPPLY line (thin pipe or hose with a small shutoff valve; it carries clean water in under pressure). Say which one it is. Point to the exact joint where the water first comes out, like the top nut under the sink, the joint where the side pipe meets the trap, or the fitting at the wall. For a drain leak, tell them to stop running water in the sink. Do not tell them to turn off the water valves for a drain leak. For a supply leak or spraying water, tell them to close the shutoff valve or the main water first. If you cannot see clearly, say so and tell them to dry the pipes, run a little water, and watch where the first drop forms.";
+  if (out.some((x) => Array.isArray(x.content) && x.content.some((p) => p.type === "image_url"))) out[0].content += "\n\nPHOTO RULES: First decide if the leaking pipe is a DRAIN pipe (wide pipe going down from the sink, the curved trap, or the pipe into the wall; it carries used water out) or a WATER SUPPLY line (thin pipe or hose with a small shutoff valve; it carries clean water in under pressure). Say which one it is. Point to the exact joint where the water first comes out, like the top nut under the sink, the joint where the side pipe meets the trap, or the fitting at the wall. For a drain leak, tell them to stop running water in the sink. Do not tell them to turn off the water valves for a drain leak. For a supply leak or spraying water, tell them to close the shutoff valve or the main water first. If you cannot see clearly, say so and tell them to dry the pipes, run a little water, and watch where the first drop forms. Photos can fool you, so start your answer with: My best guess from the photo is. Then always end with this check so they can confirm: Dry the pipes with a towel, run a little water, and watch where the first drop forms.";
   return out;
 }
 
@@ -35,6 +35,7 @@ function toOpenMessages(system, messages) {
 // Gemini, or Llama). Each model has its own rate limit on the gateway, so when one is busy
 // we move to the next. Only Ministral 8B reads photos.
 const MAIN = process.env.SMALL_MODEL || "mistral/ministral-8b";
+const PHOTO = process.env.PHOTO_MODEL || "mistral/mistral-small"; // stronger open model with better eyes, only for photos
 const BACKUPS = ["nvidia/nemotron-nano-9b-v2", "mistral/ministral-3b"];
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const hasImage = (messages) => messages.some((m) => Array.isArray(m.content) && m.content.some((b) => b.type === "image"));
@@ -60,7 +61,7 @@ async function askSmallModel({ system, messages, max_tokens, oidc, prefer }) {
   if (!token) throw { status: 500, msg: "The AI gateway is not set up. Turn on AI Gateway for this Vercel project." };
   const args = { system, messages, max_tokens, token };
   // Photos need Ministral. "check" asks a different model first, for a real second opinion.
-  let order = hasImage(messages) ? [MAIN]
+  let order = hasImage(messages) ? [PHOTO, MAIN]
     : prefer === "check" ? [BACKUPS[0], BACKUPS[1], MAIN]
     : prefer === "check2" ? [BACKUPS[1], BACKUPS[0], MAIN]
     : [MAIN, ...BACKUPS];
