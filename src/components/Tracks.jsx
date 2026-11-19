@@ -311,6 +311,18 @@ function WeekCard({ t, w, level, locked, done, onComplete }) {
                 <span className={"chip " + (writtenPassed ? "green" : "")}>{writtenPassed ? <><Icon name="Check" size={14} /> Written check passed</> : "Written check: to do"}</span>
               </div>
 
+              {t.id === "business-systems" && w.week === 1 && (
+                <div className="panel" style={{ marginTop: 12, borderLeft: "4px solid var(--teal)" }}>
+                  <h4 style={stepTitle}>Start here: get your free Salesforce practice account</h4>
+                  <ol style={{ margin: "0 0 6px", paddingLeft: 20, lineHeight: 1.6 }}>
+                    <li>Go to <a href="https://trailhead.salesforce.com" target="_blank" rel="noreferrer">trailhead.salesforce.com</a>.</li>
+                    <li>Tap <strong>Sign Up</strong> and use your email. It is free.</li>
+                    <li>Search for <strong>Salesforce Platform Basics</strong> and start it. This gives you a free practice Salesforce to click around in.</li>
+                    <li>Stuck? Tell your Lumo coach what you see on your screen, or send a photo. The coach will walk you through what to click.</li>
+                  </ol>
+                </div>
+              )}
+
               <div className="panel tint" style={{ marginTop: 12 }}>
                 <h4 style={stepTitle}>Step 1: Your assignment</h4>
                 <p style={{ margin: "0 0 10px" }}>{assignment}</p>
