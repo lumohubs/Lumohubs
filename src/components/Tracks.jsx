@@ -329,7 +329,7 @@ function WeekCard({ t, w, level, locked, done, onComplete }) {
                     </div>
                   ))}
                   {busy && <div className="muted small">{mentor} is thinking...</div>}
-                  <div className="ai-src">{mentor}, powered by Claude</div>
+                  <div className="ai-src">{mentor}</div>
                 </div>
               )}
 

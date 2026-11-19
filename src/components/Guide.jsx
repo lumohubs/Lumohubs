@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
 import { LIVE_TRACKS, SECTORS, trackById, isVocational } from "../data/tracks";
-import { askClaude } from "../ai";
+import { askClaude, shrinkImage } from "../ai";
 import { useLearner, signIn, signOut, saveLearner } from "../learner";
 import { Markdown } from "./Markdown";
 import { Icon, IconBadge } from "./Icons";
+import { WeekQuiz, LEVELS, levelOf, LEVEL_DEPTH } from "./Work";
 
 // The live coach. It knows each learner by name, remembers their goal, track, and progress,
 // greets them first, and guides them to the next step.
@@ -125,6 +126,8 @@ function buildSystem(l) {
     "You are Lumo, the personal coach at Lumo Hubs, a training platform that teaches people job skills with AI and connects them to work.",
     "You are warm, upbeat, and direct. Use plain words a 5th grader can read. Keep replies under 120 words. Short paragraphs. Ask only ONE question at a time. Do not use em dashes.",
     `Learner's first name: ${l.name}. Use it.`,
+    `${LEVEL_DEPTH[levelOf(l)]} Match every answer to this level.${levelOf(l) < 3 ? " If they say it feels too easy, tell them to tap 'Take the level up check' on their plan. Everyone moves through all 3 levels: Beginner, Intermediate, Advanced." : ""}`,
+    l.about ? `About them, in their own words: ${l.about}.` : "",
     l.goal ? `Their goal: ${l.goal}.` : "You do not know their goal yet. Find out what they want: a first job, a better job, a career change, start a business, or a new skill.",
     "Lumo Hubs plan: every learner takes Business Systems & Tools (Salesforce, Monday.com, Asana, HubSpot, Slack, Google Workspace, Excel, Copilot) at the same time as their main track. They work on both each week. For trades and vocational learners, explain that these tools help them find customers, book and track jobs, send quotes, and run their own business. Learners who already know the tools can tap 'I already know these' on their plan and pass a 10 question check to skip it.",
     bizStatus(l) === "tested-out" ? "This learner tested out of Business Tools. Do not push it." : bizStatus(l) === "on" ? `Business Tools: ${((l.progress || {})[BIZ] || []).length} of 6 weeks done.` : "",
@@ -141,6 +144,8 @@ function buildSystem(l) {
     "Button names in the app: 'Continue Week N' on the plan, 'Start this track' and 'See all tracks we offer' in the track list. Use these exact names.",
     "When the learner asks to see all choices, tell them to tap 'See all tracks we offer' below the chat, then name 2 or 3 that fit their goal.",
     "Never make up jobs, pay, or promises. If you do not know, say so.",
+    "If the learner sends a photo, look at it closely, say what you see in one line, then help with their question about it. If the photo is not clear, ask for a closer or brighter one.",
+    "Follow up ideas: at the very end of EVERY reply, add 2 or 3 lines, each starting with NEXT: and then a short question the learner could ask you next (under 10 words, in their voice, like 'How do I price my first job?'). Make them go a little deeper or more advanced than your answer. The app shows these as buttons and hides the NEXT: lines.",
   ].filter(Boolean).join(" ");
 }
 
@@ -150,15 +155,17 @@ const ID_LABEL = new RegExp("^(\\s*(?:[-*\\u2022]\\s+|\\d+[.)]\\s+)?)(?:\\*\\*)?
 
 // Pull out GOAL: and TRACK: lines.
 function parseReply(text) {
-  const goals = [], tracks = [];
+  const goals = [], tracks = [], next = [];
   const clean = text.split("\n").filter((line) => {
     const g = line.match(/^\s*\**GOAL:\**\s*(.+)$/i);
     const tr = line.match(/^\s*\**TRACK:\**\s*([a-z0-9-]+)/i);
+    const nx = line.match(/^\s*\**NEXT:\**\s*(.+)$/i);
+    if (nx) { const q = nx[1].replace(/\*+$/, "").replace(/^["']|["']$/g, "").trim(); if (q && q.length < 90) next.push(q); return false; }
     if (g) { goals.push(g[1].replace(/\*+$/, "").trim()); return false; }
     if (tr) { if (trackById(tr[1].toLowerCase())) tracks.push(tr[1].toLowerCase()); return false; }
     return true;
   }).join("\n").replace(/\s*[\u2014\u2013]\s*/g, ", ").replace(ID_LABEL, "$1").trim();
-  return { clean, goal: goals[0], tracks: Array.from(new Set(tracks)).slice(0, 2) };
+  return { clean, goal: goals[0], tracks: Array.from(new Set(tracks)).slice(0, 2), next: Array.from(new Set(next)).slice(0, 3) };
 }
 
 function SignIn() {
@@ -254,13 +261,72 @@ function Offer({ onStart, onAsk, busy, currentId }) {
   );
 }
 
+// Round profile photo, or the first letter of the name if there is no photo.
+export function Avatar({ l, size = 44 }) {
+  const style = { width: size, height: size, borderRadius: "50%", flex: "0 0 auto", objectFit: "cover" };
+  return l.photo
+    ? <img src={l.photo} alt="" style={style} />
+    : <span aria-hidden="true" style={{ ...style, display: "inline-flex", alignItems: "center", justifyContent: "center", background: "var(--teal-soft)", color: "var(--teal)", fontWeight: 700, fontSize: size * 0.45 }}>{(l.name || "?").slice(0, 1).toUpperCase()}</span>;
+}
+
+// "My profile": the learner can change their name, goal, a short about me, and their photo.
+export function ProfileEditor({ l, onClose }) {
+  const [name, setName] = useState(l.name || "");
+  const [goal, setGoal] = useState(l.goal || "");
+  const [about, setAbout] = useState(l.about || "");
+  const [photo, setPhoto] = useState(l.photo || "");
+  const [msg, setMsg] = useState("");
+  async function pick(e) {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!f) return;
+    if (!/^image\//.test(f.type)) { setMsg("Please pick a photo."); return; }
+    try { const img = await shrinkImage(f, 200, 0.8); setPhoto(img.url); setMsg(""); } catch { setMsg("That photo did not work. Try another one."); }
+  }
+  function save(e) {
+    e.preventDefault();
+    if (!name.trim()) { setMsg("Please enter your first name."); return; }
+    saveLearner({ name: name.trim(), goal: goal.trim(), about: about.trim(), photo, event: "edited profile" });
+    setMsg("Saved!");
+    setTimeout(onClose, 700);
+  }
+  return (
+    <form className="panel" style={{ marginBottom: 12 }} onSubmit={save}>
+      <h3 style={{ marginTop: 0 }}>My profile</h3>
+      <div className="row" style={{ gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+        <Avatar l={{ name, photo }} size={64} />
+        <label className="btn ghost small" style={{ cursor: "pointer" }}>
+          <Icon name="Camera" size={16} /> {photo ? "Change photo" : "Add a photo"}
+          <input type="file" accept="image/*" hidden onChange={pick} />
+        </label>
+        {photo && <button type="button" className="btn ghost small" onClick={() => setPhoto("")}>Remove photo</button>}
+      </div>
+      <label className="small" htmlFor="p-name" style={{ display: "block", marginTop: 12 }}>First name</label>
+      <input id="p-name" className="input" value={name} maxLength={60} onChange={(e) => setName(e.target.value)} />
+      <label className="small" htmlFor="p-goal" style={{ display: "block", marginTop: 10 }}>My goal</label>
+      <input id="p-goal" className="input" value={goal} maxLength={300} onChange={(e) => setGoal(e.target.value)} placeholder="For example: get my first tech job" />
+      <label className="small" htmlFor="p-about" style={{ display: "block", marginTop: 10 }}>About me <span className="muted">(your coach reads this)</span></label>
+      <textarea id="p-about" className="input" rows={3} value={about} maxLength={300} onChange={(e) => setAbout(e.target.value)} placeholder="Where you live, what you do now, what you already know" />
+      <div className="small muted" style={{ marginTop: 6 }}>Your email ({l.email}) is how you sign in, so it stays the same.</div>
+      {msg && <div className={msg === "Saved!" ? "chip green" : "err"} style={{ marginTop: 8 }}>{msg}</div>}
+      <div className="row" style={{ marginTop: 12 }}>
+        <button className="btn">Save</button>
+        <button type="button" className="btn ghost" onClick={onClose}>Cancel</button>
+      </div>
+    </form>
+  );
+}
+
 // A short help guide, written for testers and new learners.
 function HelpGuide({ open }) {
   return (
     <details className="panel" style={{ marginBottom: 12 }} open={open}>
       <summary style={{ cursor: "pointer", fontWeight: 600 }}>How to use Lumo (quick help)</summary>
       <ol style={{ margin: "10px 0 0", paddingLeft: 20, lineHeight: 1.6 }}>
-        <li><strong>Talk to your coach.</strong> Type a question in the box at the bottom and tap <strong>Send</strong>. The coach answers right here.</li>
+        <li><strong>Talk to your coach.</strong> Type a question in the box at the bottom and tap <strong>Send</strong>. The coach answers right here. Tap a button under <strong>Ask next</strong> to go deeper.</li>
+        <li><strong>Send a photo.</strong> Tap the <strong>camera</strong> next to the message box to show your coach a problem, like a leak or an error on your screen.</li>
+        <li><strong>Levels.</strong> Everyone starts at Beginner and moves up to Intermediate, then Advanced. On <strong>Your plan</strong>, tap <strong>Take the level up check</strong>: 10 questions, 8 right to move up. Your coach and quizzes get harder at each level.</li>
+        <li><strong>Your profile.</strong> Tap <strong>My profile</strong> at the top to change your name, goal, about me, or photo.</li>
         <li><strong>New line on a phone:</strong> the Enter key starts a new line. Tap <strong>Send</strong> when you are done. On a computer, press Enter to send and Shift + Enter for a new line.</li>
         <li><strong>Pick a track.</strong> Tap <strong>See all tracks we offer</strong> under the chat. Tap a track to see what you learn, then tap <strong>Start this track</strong>.</li>
         <li><strong>Do your week.</strong> On <strong>Your plan</strong>, tap <strong>Continue Week</strong>. Each week has work to submit, a 10 question quiz, and a written check.</li>
@@ -277,6 +343,25 @@ const isTouch = () => {
   try { return window.matchMedia("(pointer: coarse)").matches; } catch { return false; }
 };
 
+// Level up check: 10 questions at the NEXT level, 8 right to move up, 24 hour wait after a miss.
+function LevelCheck({ l, t, onClose }) {
+  const lv = levelOf(l);
+  const next = lv + 1;
+  const w = { week: "L" + next, title: LEVELS[next - 1] + " level check", focus: "Everything a strong " + LEVELS[next - 1].toLowerCase() + " learner in " + t.name + " should know and be able to do on the job.", tools: t.software || [] };
+  return (
+    <div className="panel" style={{ marginTop: 10 }}>
+      <strong>Level up check: {LEVELS[lv - 1]} to {LEVELS[next - 1]}</strong>
+      <div className="small muted" style={{ marginBottom: 8 }}>10 questions at the {LEVELS[next - 1]} level. Get 8 right to move up. If you miss, you can try again in {RETRY_HOURS} hours.</div>
+      <WeekQuiz t={t} w={w} level={next} label={"Start the " + LEVELS[next - 1] + " check"} saved={null}
+        onSave={(q) => {
+          if (q.passed) saveLearner({ level: next, event: "leveled up to " + LEVELS[next - 1] });
+          else saveLearner({ levelFailedAt: Date.now(), event: "missed level check " + LEVELS[next - 1] });
+        }} />
+      <button className="btn ghost small" style={{ marginTop: 8 }} onClick={onClose}>Close</button>
+    </div>
+  );
+}
+
 export function Guide({ openTrack }) {
   const { learner: l, ready, noStore } = useLearner();
   const [chat, setChat] = useState([]);
@@ -286,6 +371,10 @@ export function Guide({ openTrack }) {
   const [picks, setPicks] = useState([]);
   const [showOffer, setShowOffer] = useState(null); // null = default (open until they pick a track)
   const [checking, setChecking] = useState(false);
+  const [nexts, setNexts] = useState([]); // follow up questions the coach suggests
+  const [photo, setPhoto] = useState(null); // photo waiting to be sent to the coach
+  const [editing, setEditing] = useState(false); // "My profile" open
+  const [leveling, setLeveling] = useState(false); // level up check open
   const boxRef = useRef(null);
   const lastRef = useRef(null);
   const offerRef = useRef(null);
@@ -308,9 +397,14 @@ export function Guide({ openTrack }) {
     }
   }, [chat, busy]);
 
-  async function ask(history, hidden) {
-    setBusy(true); setError("");
+  async function ask(history, hidden, image) {
+    setBusy(true); setError(""); setNexts([]);
     const msgs = history.slice(-12).map((m) => ({ role: m.role, content: m.text }));
+    // A photo goes only with the newest message, so older photos are not sent again.
+    if (image && msgs.length) {
+      const last = msgs[msgs.length - 1];
+      last.content = [{ type: "image", source: { type: "base64", media_type: image.type, data: image.data } }, { type: "text", text: last.content || "What do you see in this photo?" }];
+    }
     if (hidden) msgs.push({ role: "user", content: hidden });
     // The chat must start with the learner speaking.
     if (msgs.length && msgs[0].role === "assistant") msgs.unshift({ role: "user", content: "Hi" });
@@ -321,6 +415,7 @@ export function Guide({ openTrack }) {
     const patch = {};
     if (p.goal) patch.goal = p.goal;
     if (p.tracks.length) setPicks(p.tracks);
+    setNexts(p.next);
     const next = [...history, { role: "assistant", text: p.clean, at: Date.now() }];
     setChat(next);
     saveLearner({ ...patch, chat: next });
@@ -339,13 +434,25 @@ export function Guide({ openTrack }) {
   }, [l]);
 
   async function send(text) {
-    const t = (text ?? input).trim();
-    if (!t || busy) return;
-    const next = [...chat, { role: "user", text: t, at: Date.now() }];
-    setChat(next); setInput("");
+    const typed = (text ?? input).trim();
+    const img = text == null ? photo : null;
+    if ((!typed && !img) || busy) return;
+    const t = typed || "Please look at my photo and help me.";
+    // The chat keeps a short note that a photo was sent. The photo itself is not stored.
+    const shown = img ? "[Photo sent] " + t : t;
+    const next = [...chat, { role: "user", text: shown, at: Date.now(), ...(img ? { thumb: img.url } : {}) }];
+    setChat(next); setInput(""); setPhoto(null);
     saveLearner({ chat: next, asked: 1 });
-    const done = await ask(next);
-    if (!done) { setChat(chat); setInput(t); }
+    const done = await ask(next, null, img);
+    if (!done) { setChat(chat); setInput(typed); setPhoto(img); }
+  }
+
+  async function pickPhoto(e) {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!f) return;
+    if (!/^image\//.test(f.type)) { setError("Please pick a photo."); return; }
+    try { setPhoto(await shrinkImage(f, 1024, 0.8)); setError(""); } catch { setError("That photo did not work. Try another one."); }
   }
 
   function chooseTrack(id) {
@@ -364,6 +471,8 @@ export function Guide({ openTrack }) {
   const bizWeek = nextWeek(l.progress, BIZ);
   const waitMs = l.bizCheckFailedAt ? l.bizCheckFailedAt + RETRY_HOURS * 3600000 - Date.now() : 0;
   const locked = waitMs > 0 ? Math.ceil(waitMs / 3600000) : 0;
+  const lvWait = l.levelFailedAt ? l.levelFailedAt + RETRY_HOURS * 3600000 - Date.now() : 0;
+  const lvLocked = lvWait > 0 ? Math.ceil(lvWait / 3600000) : 0;
   const quick = !l.goal
     ? ["Get my first job", "Switch careers", "Start a business", "Learn AI for my job"]
     : !t ? ["Which track fits me?", "What jobs pay well?"] : ["What do I do this week?", "Quiz me", "I'm stuck"];
@@ -372,13 +481,22 @@ export function Guide({ openTrack }) {
   return (
     <div>
       <HelpGuide open={!t && !(l.chat && l.chat.length > 2)} />
-      <div className="row between" style={{ marginBottom: 12 }}>
-        <div>
-          <h2 style={{ margin: 0 }}>Hi {l.name}</h2>
-          <div className="small muted">{t ? `${t.name}: ${((l.progress || {})[t.id] || []).length} of 6 weeks done` : "Let's find your track"}{l.goal ? ` · Goal: ${l.goal}` : ""}</div>
+      <div className="row between" style={{ marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
+        <div className="row" style={{ gap: 10, alignItems: "center" }}>
+          <Avatar l={l} />
+          <div>
+            <h2 style={{ margin: 0 }}>Hi {l.name}</h2>
+            <div className="small muted">{t ? `${t.name}: ${((l.progress || {})[t.id] || []).length} of 6 weeks done` : "Let's find your track"}{l.goal ? ` · Goal: ${l.goal}` : ""}</div>
+            <span className="chip teal" style={{ marginTop: 4 }}>Level {levelOf(l)}: {LEVELS[levelOf(l) - 1]}</span>
+          </div>
         </div>
-        <button className="btn ghost small" onClick={() => { greetedThisVisit = false; setChat([]); signOut(); }}>Sign out</button>
+        <div className="row" style={{ gap: 8 }}>
+          <button className="btn ghost small" onClick={() => setEditing(!editing)} aria-expanded={editing}>My profile</button>
+          <button className="btn ghost small" onClick={() => { greetedThisVisit = false; setChat([]); signOut(); }}>Sign out</button>
+        </div>
       </div>
+
+      {editing && <ProfileEditor l={l} onClose={() => setEditing(false)} />}
 
       {t && (
         <div className="panel tint" style={{ marginBottom: 12 }}>
@@ -396,6 +514,14 @@ export function Guide({ openTrack }) {
                   : <span className="row" style={{ gap: 8, flexWrap: "wrap" }}><strong>Next: hands on, in person training (required to finish).</strong><button className="btn small" onClick={() => saveLearner({ inPerson: "requested", event: "requested in person " + t.id })}>Request my in person spot</button></span>}
             </div>
           )}
+          <div className="row between" style={{ flexWrap: "wrap", gap: 8, marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(0,0,0,0.08)" }}>
+            <span><strong>Your level:</strong> {LEVELS[levelOf(l) - 1]} <span className="small muted">({levelOf(l)} of 3. Everyone does all 3 levels.)</span></span>
+            {levelOf(l) < 3
+              ? (lvLocked ? <span className="small muted">Try the level check again in {lvLocked} hours</span>
+                : !leveling && <button className="btn small" onClick={() => setLeveling(true)}>Take the level up check</button>)
+              : <span className="chip green">Top level</span>}
+          </div>
+          {leveling && levelOf(l) < 3 && <LevelCheck l={l} t={t} onClose={() => setLeveling(false)} />}
           {biz === "on" && (
             <div className="row between" style={{ flexWrap: "wrap", gap: 8, marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(0,0,0,0.08)" }}>
               <span><strong>Business Tools:</strong> {bizWeek ? "Week " + bizWeek : "done"} <span className="small muted">(Salesforce, HubSpot, Monday.com and more)</span></span>
@@ -418,6 +544,7 @@ export function Guide({ openTrack }) {
         {chat.map((m, i) => (
           <div key={i} ref={i === chat.length - 1 ? lastRef : null} style={{ margin: "0 0 12px", textAlign: m.role === "user" ? "end" : "start" }}>
             <div className="small muted">{m.role === "user" ? "You" : "Lumo coach"}</div>
+            {m.thumb && <img src={m.thumb} alt="Photo you sent" style={{ maxWidth: 160, maxHeight: 160, borderRadius: 8, display: "inline-block", marginBottom: 4 }} />}
             {m.role === "user" ? <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div> : <Markdown text={m.text} />}
           </div>
         ))}
@@ -430,13 +557,35 @@ export function Guide({ openTrack }) {
         </div>
       )}
 
+      {!busy && nexts.length > 0 && (
+        <div style={{ marginTop: 10 }}>
+          <div className="small" style={{ fontWeight: 600, marginBottom: 4 }}>Ask next</div>
+          <div className="row" style={{ flexWrap: "wrap", gap: 6 }}>
+            {nexts.map((q) => <button key={q} className="btn ghost small" onClick={() => send(q)}>{q}</button>)}
+            {t && nw && <button className="btn teal small" onClick={() => openTrack(t.id)}>Learn more in Week {nw}</button>}
+          </div>
+        </div>
+      )}
+
       {error && <div className="err">{error}</div>}
 
       <div className="row" style={{ marginTop: 10, flexWrap: "wrap" }}>
         {quick.map((q) => <button key={q} className="btn ghost small" onClick={() => send(q)} disabled={busy}>{q}</button>)}
       </div>
 
+      {photo && (
+        <div className="row" style={{ marginTop: 10, gap: 8, alignItems: "center" }}>
+          <img src={photo.url} alt="Photo ready to send" style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 8 }} />
+          <span className="small">Photo ready. Add a question if you like, then tap Send.</span>
+          <button type="button" className="btn ghost small" onClick={() => setPhoto(null)}>Remove</button>
+        </div>
+      )}
+
       <form className="row" style={{ marginTop: 10, alignItems: "flex-end" }} onSubmit={(e) => { e.preventDefault(); send(); }}>
+        <label className="btn ghost" style={{ cursor: "pointer", padding: "10px 12px" }} title="Send a photo to your coach">
+          <Icon name="Camera" size={18} label="Add a photo" />
+          <input type="file" accept="image/*" hidden onChange={pickPhoto} disabled={busy} />
+        </label>
         <textarea
           className="input"
           rows={2}
@@ -451,7 +600,7 @@ export function Guide({ openTrack }) {
           placeholder="Type a message to your coach"
           aria-label="Message to your coach"
         />
-        <button className="btn" disabled={busy || !input.trim()}><Icon name="Rocket" size={16} /> Send</button>
+        <button className="btn" disabled={busy || (!input.trim() && !photo)}><Icon name="Rocket" size={16} /> Send</button>
       </form>
 
       <button
