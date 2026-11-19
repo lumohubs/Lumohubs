@@ -28,7 +28,7 @@ export function TrackLibrary({ onOpen, lang }) {
         <div className="seg" role="tablist" aria-label="Filter by sector">
           <button className={sector === "all" ? "on" : ""} onClick={() => setSector("all")}>All</button>
           {SECTORS.map((s) => (
-            <button key={s.id} className={sector === s.id ? "on" : ""} onClick={() => setSector(s.id)}>{lang === "ar" ? s.nameAr : s.name}</button>
+            <button key={s.id} className={sector === s.id ? "on" : ""} onClick={() => setSector(s.id)}>{lang === "ar" ? s.nameAr : (s.short || s.name)}</button>
           ))}
         </div>
         <input className="input" style={{ maxWidth: 240 }} placeholder="Search tracks" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search tracks" />
@@ -168,6 +168,7 @@ function WeekCard({ t, w, level, locked, done, onComplete }) {
   const submitted = !!rec.submission;
   const quizPassed = !!(rec.quiz && rec.quiz.passed);
   const writtenPassed = !!(rec.written && rec.written.passed);
+  const [testingOut, setTestingOut] = useState(false);
 
   useEffect(() => {
     if (boxRef.current) boxRef.current.scrollTop = boxRef.current.scrollHeight;
@@ -310,6 +311,44 @@ function WeekCard({ t, w, level, locked, done, onComplete }) {
                 <span className={"chip " + (quizPassed ? "green" : "")}>{quizPassed ? <><Icon name="Check" size={14} /> Quiz passed</> : "Quiz: to do"}</span>
                 <span className={"chip " + (writtenPassed ? "green" : "")}>{writtenPassed ? <><Icon name="Check" size={14} /> Written check passed</> : "Written check: to do"}</span>
               </div>
+
+              {!done && !rec.testedOut && (
+                <div className="panel" style={{ marginTop: 12 }}>
+                  {!testingOut ? (
+                    <div className="row between" style={{ flexWrap: "wrap", gap: 8 }}>
+                      <span className="small"><strong>Already know this week?</strong> Pass a 10 question test (8 right) to skip it.</span>
+                      <button className="btn ghost small" onClick={() => setTestingOut(true)}>Test out of Week {w.week}</button>
+                    </div>
+                  ) : (
+                    <>
+                      <h4 style={stepTitle}>Test out of Week {w.week}</h4>
+                      <div className="small muted" style={{ marginBottom: 8 }}>10 questions at your level. Get 8 right and this week is marked done. Miss it and just do the week as normal.</div>
+                      <WeekQuiz t={t} w={{ ...w, week: "T" + w.week, title: "Week " + w.week + ": " + w.title }} saved={null} label={"Start the Week " + w.week + " test out"}
+                        onSave={(q) => {
+                          if (q.passed) {
+                            update((st) => ({ ...st, weeks: { ...st.weeks, [key]: { ...(st.weeks[key] || {}), testedOut: { score: q.score, date: q.date } } } }));
+                            saveLearner({ event: "tested out of " + t.id + " week " + w.week });
+                            onComplete && onComplete();
+                          }
+                        }} />
+                      <button className="btn ghost small" style={{ marginTop: 8 }} onClick={() => setTestingOut(false)}>Close</button>
+                    </>
+                  )}
+                </div>
+              )}
+              {rec.testedOut && <div className="chip green" style={{ marginTop: 12 }}>Tested out of this week: {rec.testedOut.score} of 10</div>}
+
+              {t.id === "business-systems" && w.week === 1 && (
+                <div className="panel" style={{ marginTop: 12, borderLeft: "4px solid var(--teal)" }}>
+                  <h4 style={stepTitle}>Start here: get your free Salesforce practice account</h4>
+                  <ol style={{ margin: "0 0 6px", paddingLeft: 20, lineHeight: 1.6 }}>
+                    <li>Go to <a href="https://trailhead.salesforce.com" target="_blank" rel="noreferrer">trailhead.salesforce.com</a>.</li>
+                    <li>Tap <strong>Sign Up</strong> and use your email. It is free.</li>
+                    <li>Search for <strong>Salesforce Platform Basics</strong> and start it. This gives you a free practice Salesforce to click around in.</li>
+                    <li>Stuck? Tell your Lumo coach what you see on your screen, or send a photo. The coach will walk you through what to click.</li>
+                  </ol>
+                </div>
+              )}
 
               <div className="panel tint" style={{ marginTop: 12 }}>
                 <h4 style={stepTitle}>Step 1: Your assignment</h4>

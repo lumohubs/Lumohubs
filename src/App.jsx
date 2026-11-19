@@ -101,6 +101,8 @@ function Home({ go, setRole, openTrack }) {
   );
 }
 
+// Learners see a short menu. Everything else (demo, employer, and staff pages) sits under "More".
+const LEARNER_NAV = [["home", "Home"], ["coach", "Users"], ["tracks", "BookOpen"], ["portfolio", "IdCard"]];
 const NAV = [
   { group: "learn", items: [["home", "Home"], ["coach", "Users"], ["tracks", "BookOpen"], ["quiz", "Compass"], ["portfolio", "IdCard"], ["builder", "Rocket"]] },
   { group: "work", items: [["talent", "Briefcase"], ["employer", "Building2"], ["plumberfix", "Wrench"]] },
@@ -117,6 +119,8 @@ export default function App() {
   const [progress, setProgress] = useState(() => { try { return JSON.parse(localStorage.getItem("lh-progress") || "{}"); } catch { return {}; } });
   const [waitlist, setWaitlist] = useState([]);
   const [applications, setApplications] = useState([]);
+  const [showMore, setShowMore] = useState(false);
+  const [landed, setLanded] = useState(false);
   const t = STR[lang];
   const { learner } = useLearner();
 
@@ -148,6 +152,9 @@ export default function App() {
   useEffect(() => { document.documentElement.dir = lang === "ar" ? "rtl" : "ltr"; document.documentElement.lang = lang; }, [lang]);
   useEffect(() => { window.scrollTo(0, 0); }, [view, trackId]);
 
+  // A signed in learner lands on their coach, not the marketing home page.
+  useEffect(() => { if (learner && !landed) { setLanded(true); if (view === "home") setView("coach"); } }, [learner]);
+
   if (!checked) return null;
   if (!unlocked) return <Gate onUnlock={() => setUnlocked(true)} />;
 
@@ -160,16 +167,27 @@ export default function App() {
     if (learner && learner.trackId !== id && !keepMain) saveLearner({ trackId: id, event: "opened " + id });
   };
 
-  const navButtons = NAV.map((g) => (
-    <div key={g.group}>
-      <div className="nav-group">{t[g.group]}</div>
-      {g.items.map(([k, icon]) => (
-        <button key={k} className={`nav-btn ${view === k ? "active" : ""}`} onClick={() => go(k)} aria-current={view === k ? "page" : undefined}>
-          <Icon name={icon} /><span>{t[k]}</span>
-        </button>
-      ))}
+  const navBtn = ([k, icon]) => (
+    <button key={k} className={`nav-btn ${view === k ? "active" : ""}`} onClick={() => go(k)} aria-current={view === k ? "page" : undefined}>
+      <Icon name={icon} /><span>{t[k]}</span>
+    </button>
+  );
+  const moreItems = NAV.flatMap((g) => g.items).filter(([k]) => !LEARNER_NAV.some(([x]) => x === k));
+  const moreBtn = (
+    <button className="nav-btn" onClick={() => setShowMore(!showMore)} aria-expanded={showMore}>
+      <Icon name="Compass" /><span>{showMore ? "Less" : "More"}</span>
+    </button>
+  );
+  const navButtons = (
+    <div>
+      {LEARNER_NAV.map(navBtn)}
+      {moreBtn}
+      {showMore && NAV.map((g) => {
+        const items = g.items.filter(([k]) => moreItems.some(([x]) => x === k));
+        return items.length ? <div key={g.group}><div className="nav-group">{t[g.group]}</div>{items.map(navBtn)}</div> : null;
+      })}
     </div>
-  ));
+  );
 
   let page;
   if (view === "home") page = <Home go={go} setRole={setRole} openTrack={openTrack} />;
@@ -196,12 +214,12 @@ export default function App() {
       </aside>
       <div className="main">
         <div className="mobile-nav" aria-label="Main menu">
-          {NAV.flatMap((g) => g.items).map(([k, icon]) => (
-            <button key={k} className={`nav-btn ${view === k ? "active" : ""}`} onClick={() => go(k)}><Icon name={icon} /><span>{t[k]}</span></button>
-          ))}
+          {LEARNER_NAV.map(navBtn)}
+          {moreBtn}
+          {showMore && moreItems.map(navBtn)}
         </div>
         <header className="topbar">
-          <div className="row">
+          {showMore ? <div className="row">
             <span className="small muted">{t.viewAs}</span>
             <select className="input" style={{ width: "auto", padding: "6px 10px" }} value={role} onChange={(e) => setRole(e.target.value)} aria-label="Viewing as">
               <option value="student">{t.student}</option>
@@ -211,7 +229,7 @@ export default function App() {
               <option value="staff">{t.staff}</option>
             </select>
             <span className="sample">{t.sample}</span>
-          </div>
+          </div> : <div />}
           <div className="row">
             <div className="seg" aria-label="Language">
               <button className={lang === "en" ? "on" : ""} onClick={() => setLang("en")}>English</button>
