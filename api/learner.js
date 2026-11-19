@@ -101,6 +101,8 @@ export default async function handler(req, res) {
       if (typeof p.goal === "string") l.goal = p.goal.slice(0, 300);
       // Profile the learner can edit: first name, a short "about me", and a small photo.
       if (typeof p.name === "string" && p.name.trim()) l.name = p.name.trim().slice(0, 60);
+      if ([1, 2, 3].includes(p.level)) { if (p.level !== l.level) l.levelAt = Date.now(); l.level = p.level; }
+      if (p.levelFailedAt) l.levelFailedAt = Date.now();
       if (typeof p.about === "string") l.about = p.about.slice(0, 300);
       if (p.photo === "") l.photo = "";
       else if (typeof p.photo === "string" && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(p.photo) && p.photo.length < 80000) l.photo = p.photo;
@@ -137,7 +139,7 @@ export default async function handler(req, res) {
           createdAt: l.createdAt, lastSeen: l.lastSeen,
           weeksDone: Object.values(l.progress || {}).reduce((n, a) => n + (Array.isArray(a) ? a.length : 0), 0),
           submitted: Object.values(l.weeks || {}).filter((w) => w.submission).length,
-          questions: l.questions || 0,
+          questions: l.questions || 0, level: l.level || 1,
         });
       }
       out.sort((a, b2) => (b2.lastSeen || 0) - (a.lastSeen || 0));
@@ -155,7 +157,7 @@ export default async function handler(req, res) {
         out.push({
           name: l.name, email: l.email, goal: l.goal || "", trackId: l.trackId || "", bizTools: l.bizTools || "on",
           inPerson: l.inPerson || "", inPersonAt: l.inPersonAt || null, createdAt: l.createdAt, lastSeen: l.lastSeen,
-          questions: l.questions || 0, progress: l.progress || {}, weeks: l.weeks || {},
+          questions: l.questions || 0, level: l.level || 1, progress: l.progress || {}, weeks: l.weeks || {},
         });
       }
       out.sort((a, c) => (c.inPersonAt || c.lastSeen || 0) - (a.inPersonAt || a.lastSeen || 0));

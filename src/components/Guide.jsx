@@ -4,6 +4,7 @@ import { askClaude, shrinkImage } from "../ai";
 import { useLearner, signIn, signOut, saveLearner } from "../learner";
 import { Markdown } from "./Markdown";
 import { Icon, IconBadge } from "./Icons";
+import { WeekQuiz, LEVELS, levelOf, LEVEL_DEPTH } from "./Work";
 
 // The live coach. It knows each learner by name, remembers their goal, track, and progress,
 // greets them first, and guides them to the next step.
@@ -125,6 +126,7 @@ function buildSystem(l) {
     "You are Lumo, the personal coach at Lumo Hubs, a training platform that teaches people job skills with AI and connects them to work.",
     "You are warm, upbeat, and direct. Use plain words a 5th grader can read. Keep replies under 120 words. Short paragraphs. Ask only ONE question at a time. Do not use em dashes.",
     `Learner's first name: ${l.name}. Use it.`,
+    `${LEVEL_DEPTH[levelOf(l)]} Match every answer to this level.${levelOf(l) < 3 ? " If they say it feels too easy, tell them to tap 'Take the level up check' on their plan. Everyone moves through all 3 levels: Beginner, Intermediate, Advanced." : ""}`,
     l.about ? `About them, in their own words: ${l.about}.` : "",
     l.goal ? `Their goal: ${l.goal}.` : "You do not know their goal yet. Find out what they want: a first job, a better job, a career change, start a business, or a new skill.",
     "Lumo Hubs plan: every learner takes Business Systems & Tools (Salesforce, Monday.com, Asana, HubSpot, Slack, Google Workspace, Excel, Copilot) at the same time as their main track. They work on both each week. For trades and vocational learners, explain that these tools help them find customers, book and track jobs, send quotes, and run their own business. Learners who already know the tools can tap 'I already know these' on their plan and pass a 10 question check to skip it.",
@@ -323,6 +325,7 @@ function HelpGuide({ open }) {
       <ol style={{ margin: "10px 0 0", paddingLeft: 20, lineHeight: 1.6 }}>
         <li><strong>Talk to your coach.</strong> Type a question in the box at the bottom and tap <strong>Send</strong>. The coach answers right here. Tap a button under <strong>Ask next</strong> to go deeper.</li>
         <li><strong>Send a photo.</strong> Tap the <strong>camera</strong> next to the message box to show your coach a problem, like a leak or an error on your screen.</li>
+        <li><strong>Levels.</strong> Everyone starts at Beginner and moves up to Intermediate, then Advanced. On <strong>Your plan</strong>, tap <strong>Take the level up check</strong>: 10 questions, 8 right to move up. Your coach and quizzes get harder at each level.</li>
         <li><strong>Your profile.</strong> Tap <strong>My profile</strong> at the top to change your name, goal, about me, or photo.</li>
         <li><strong>New line on a phone:</strong> the Enter key starts a new line. Tap <strong>Send</strong> when you are done. On a computer, press Enter to send and Shift + Enter for a new line.</li>
         <li><strong>Pick a track.</strong> Tap <strong>See all tracks we offer</strong> under the chat. Tap a track to see what you learn, then tap <strong>Start this track</strong>.</li>
@@ -340,6 +343,25 @@ const isTouch = () => {
   try { return window.matchMedia("(pointer: coarse)").matches; } catch { return false; }
 };
 
+// Level up check: 10 questions at the NEXT level, 8 right to move up, 24 hour wait after a miss.
+function LevelCheck({ l, t, onClose }) {
+  const lv = levelOf(l);
+  const next = lv + 1;
+  const w = { week: "L" + next, title: LEVELS[next - 1] + " level check", focus: "Everything a strong " + LEVELS[next - 1].toLowerCase() + " learner in " + t.name + " should know and be able to do on the job.", tools: t.software || [] };
+  return (
+    <div className="panel" style={{ marginTop: 10 }}>
+      <strong>Level up check: {LEVELS[lv - 1]} to {LEVELS[next - 1]}</strong>
+      <div className="small muted" style={{ marginBottom: 8 }}>10 questions at the {LEVELS[next - 1]} level. Get 8 right to move up. If you miss, you can try again in {RETRY_HOURS} hours.</div>
+      <WeekQuiz t={t} w={w} level={next} label={"Start the " + LEVELS[next - 1] + " check"} saved={null}
+        onSave={(q) => {
+          if (q.passed) saveLearner({ level: next, event: "leveled up to " + LEVELS[next - 1] });
+          else saveLearner({ levelFailedAt: Date.now(), event: "missed level check " + LEVELS[next - 1] });
+        }} />
+      <button className="btn ghost small" style={{ marginTop: 8 }} onClick={onClose}>Close</button>
+    </div>
+  );
+}
+
 export function Guide({ openTrack }) {
   const { learner: l, ready, noStore } = useLearner();
   const [chat, setChat] = useState([]);
@@ -352,6 +374,7 @@ export function Guide({ openTrack }) {
   const [nexts, setNexts] = useState([]); // follow up questions the coach suggests
   const [photo, setPhoto] = useState(null); // photo waiting to be sent to the coach
   const [editing, setEditing] = useState(false); // "My profile" open
+  const [leveling, setLeveling] = useState(false); // level up check open
   const boxRef = useRef(null);
   const lastRef = useRef(null);
   const offerRef = useRef(null);
@@ -448,6 +471,8 @@ export function Guide({ openTrack }) {
   const bizWeek = nextWeek(l.progress, BIZ);
   const waitMs = l.bizCheckFailedAt ? l.bizCheckFailedAt + RETRY_HOURS * 3600000 - Date.now() : 0;
   const locked = waitMs > 0 ? Math.ceil(waitMs / 3600000) : 0;
+  const lvWait = l.levelFailedAt ? l.levelFailedAt + RETRY_HOURS * 3600000 - Date.now() : 0;
+  const lvLocked = lvWait > 0 ? Math.ceil(lvWait / 3600000) : 0;
   const quick = !l.goal
     ? ["Get my first job", "Switch careers", "Start a business", "Learn AI for my job"]
     : !t ? ["Which track fits me?", "What jobs pay well?"] : ["What do I do this week?", "Quiz me", "I'm stuck"];
@@ -462,6 +487,7 @@ export function Guide({ openTrack }) {
           <div>
             <h2 style={{ margin: 0 }}>Hi {l.name}</h2>
             <div className="small muted">{t ? `${t.name}: ${((l.progress || {})[t.id] || []).length} of 6 weeks done` : "Let's find your track"}{l.goal ? ` · Goal: ${l.goal}` : ""}</div>
+            <span className="chip teal" style={{ marginTop: 4 }}>Level {levelOf(l)}: {LEVELS[levelOf(l) - 1]}</span>
           </div>
         </div>
         <div className="row" style={{ gap: 8 }}>
@@ -488,6 +514,14 @@ export function Guide({ openTrack }) {
                   : <span className="row" style={{ gap: 8, flexWrap: "wrap" }}><strong>Next: hands on, in person training (required to finish).</strong><button className="btn small" onClick={() => saveLearner({ inPerson: "requested", event: "requested in person " + t.id })}>Request my in person spot</button></span>}
             </div>
           )}
+          <div className="row between" style={{ flexWrap: "wrap", gap: 8, marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(0,0,0,0.08)" }}>
+            <span><strong>Your level:</strong> {LEVELS[levelOf(l) - 1]} <span className="small muted">({levelOf(l)} of 3. Everyone does all 3 levels.)</span></span>
+            {levelOf(l) < 3
+              ? (lvLocked ? <span className="small muted">Try the level check again in {lvLocked} hours</span>
+                : !leveling && <button className="btn small" onClick={() => setLeveling(true)}>Take the level up check</button>)
+              : <span className="chip green">Top level</span>}
+          </div>
+          {leveling && levelOf(l) < 3 && <LevelCheck l={l} t={t} onClose={() => setLeveling(false)} />}
           {biz === "on" && (
             <div className="row between" style={{ flexWrap: "wrap", gap: 8, marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(0,0,0,0.08)" }}>
               <span><strong>Business Tools:</strong> {bizWeek ? "Week " + bizWeek : "done"} <span className="small muted">(Salesforce, HubSpot, Monday.com and more)</span></span>

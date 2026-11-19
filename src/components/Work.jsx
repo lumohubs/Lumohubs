@@ -2,6 +2,16 @@ import React, { useEffect, useState } from "react";
 import { trackById } from "../data/tracks";
 import { askClaude } from "../ai";
 import { Icon } from "./Icons";
+import { getLearner } from "../learner";
+
+// Learner levels. Everyone starts at Beginner and moves up by passing a 10 question level check.
+export const LEVELS = ["Beginner", "Intermediate", "Advanced"];
+export const levelOf = (l) => Math.min(Math.max(Number(l && l.level) || 1, 1), 3);
+export const LEVEL_DEPTH = {
+  1: "Level: Beginner. Teach the basics with simple, real examples.",
+  2: "Level: Intermediate. Skip the very basics. Use real work situations, common mistakes, and why each step matters.",
+  3: "Level: Advanced. Go deep. Use complex real work cases, edge cases, trade offs, and how a skilled professional would decide.",
+};
 
 // Student work saves in this browser for now (no logins yet).
 // Shape: { weeks: { "trackId:week": { submission, quiz } }, portfolio: [items] }
@@ -153,7 +163,7 @@ export function SubmitWork({ t, w, saved, onSubmit, busy }) {
 const QUIZ_SIZE = 10;
 const QUIZ_PASS = 8;
 
-export function WeekQuiz({ t, w, saved, onSave }) {
+export function WeekQuiz({ t, w, saved, onSave, label, level }) {
   const [qs, setQs] = useState(null);
   const [picks, setPicks] = useState({});
   const [busy, setBusy] = useState(false);
@@ -162,8 +172,10 @@ export function WeekQuiz({ t, w, saved, onSave }) {
 
   async function load() {
     setBusy(true); setError(""); setResult(null); setPicks({});
+    const lv = level || levelOf(getLearner());
     const prompt = [
-      "Write a hard 12 question multiple choice quiz on Lumo Hubs " + t.name + ", Week " + w.week + ": " + w.title + ". Focus: " + w.focus + " Tools: " + (w.tools || []).join(", ") + ".",
+      "Write a hard 12 question multiple choice quiz on Lumo Hubs " + t.name + (label ? ", " + w.title : ", Week " + w.week + ": " + w.title) + ". Focus: " + w.focus + " Tools: " + (w.tools || []).join(", ") + ".",
+      LEVEL_DEPTH[lv] + " Write every question at this level.",
       "Make it hard but fair. Most questions should be real work scenarios that test if the student can apply what they learned, not just repeat words.",
       t.sector === "trades" ? "Include questions on naming the right tool for a job, what a tool is used for, and safety steps." : "",
       /health|medical|radiolog/i.test(t.id + t.name) ? "Include questions on safe steps, the right order of steps, and patient safety." : "",
@@ -227,7 +239,7 @@ export function WeekQuiz({ t, w, saved, onSave }) {
     return (
       <div>
         {saved && <div style={{ marginBottom: 8 }}><span className={"chip " + (saved.passed ? "green" : "")}>{saved.passed ? "Passed" : "Not passed yet"}: {saved.score} of {saved.total}</span></div>}
-        <button className="btn small" onClick={load} disabled={busy}>{busy ? "Making your quiz..." : saved ? "Take a new quiz" : "Start the Week " + w.week + " quiz"}</button>
+        <button className="btn small" onClick={load} disabled={busy}>{busy ? "Making your quiz..." : saved ? "Take a new quiz" : label || "Start the Week " + w.week + " quiz"}</button>
         <div className="small muted" style={{ marginTop: 6 }}>{QUIZ_SIZE} questions. You need {QUIZ_PASS} right to pass. Each try has new questions.</div>
         {error && <div className="err">{error}</div>}
       </div>
