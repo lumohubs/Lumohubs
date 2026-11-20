@@ -624,22 +624,22 @@ export function Guide({ openTrack, lang = "en" }) {
           aria-label="Message to your coach"
         />
         <div className="send-row">
+          <button
+            className="btn ghost small"
+            type="button"
+            aria-expanded={offerOpen}
+            onClick={() => {
+              const opening = !offerOpen;
+              setShowOffer(opening);
+              if (opening) setTimeout(() => { try { offerRef.current && offerRef.current.scrollIntoView({ behavior: "smooth", block: "start" }); } catch {} }, 50);
+            }}
+          >
+            {offerOpen ? w.hideTracks : w.seeTracks}
+          </button>
           <button className="btn" disabled={busy || (!input.trim() && !photo)}><Icon name="Rocket" size={16} /> {w.send}</button>
         </div>
       </form>
 
-      <button
-        className="btn ghost small"
-        style={{ marginTop: 14 }}
-        aria-expanded={offerOpen}
-        onClick={() => {
-          const opening = !offerOpen;
-          setShowOffer(opening);
-          if (opening) setTimeout(() => { try { offerRef.current && offerRef.current.scrollIntoView({ behavior: "smooth", block: "start" }); } catch {} }, 50);
-        }}
-      >
-        {offerOpen ? w.hideTracks : w.seeTracks}
-      </button>
       {offerOpen && (
         <div ref={offerRef}>
           <Offer currentId={t && t.id} busy={busy} onStart={chooseTrack} onAsk={(x) => { send("Tell me about the " + x.name + " track. Is it a good fit for me?"); setPicks([x.id]); }} />
