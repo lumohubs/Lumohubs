@@ -191,7 +191,7 @@ export default function App() {
 
   let page;
   if (view === "home") page = <Home go={go} setRole={setRole} openTrack={openTrack} />;
-  else if (view === "coach") page = <Guide openTrack={openTrack} />;
+  else if (view === "coach") page = <Guide openTrack={openTrack} lang={lang} />;
   else if (view === "tracks") page = trackId
     ? <TrackDetail id={trackId} onBack={() => setTrackId(null)} waitlist={waitlist} onJoinWaitlist={(id) => setWaitlist([...waitlist, id])} progress={progress} setProgress={setProgress} />
     : <TrackLibrary onOpen={openTrack} lang={lang} />;
