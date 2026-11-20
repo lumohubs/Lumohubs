@@ -165,6 +165,7 @@ tr:last-child td { border-bottom: 0; }
 /* Coach message box: Send gets its own row under the box */
 .chat-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; margin-top: 10px; }
 .chat-form textarea { flex: 1 1 200px; min-width: 0; }
-.chat-form .send-row { flex-basis: 100%; display: flex; justify-content: flex-end; }
-.chat-form .send-row .btn { min-width: 140px; justify-content: center; }
-@media (max-width: 520px) { .chat-form .send-row .btn { width: 100%; } }
+.chat-form .send-row { flex-basis: 100%; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
+.chat-form .send-row .btn:not(.ghost) { min-width: 96px; justify-content: center; margin-left: auto; }
+/* Phones: keep Send small, on the same row as See all tracks */
+@media (max-width: 520px) { .chat-form .send-row .btn { width: auto; padding: 8px 14px; } .chat-form .send-row .btn:not(.ghost) { min-width: 80px; } }
