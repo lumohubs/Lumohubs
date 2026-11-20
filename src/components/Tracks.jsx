@@ -24,14 +24,14 @@ export function TrackLibrary({ onOpen, lang }) {
     <div>
       <h2>Tracks</h2>
       <p className="muted">{LIVE_TRACKS.length} tracks are open now. Each starts with a free 2 week starter. Foundation is free for students and community. Advanced is paid by employers.</p>
-      <div className="row" style={{ margin: "16px 0" }}>
+      <div className="row track-filters" style={{ margin: "16px 0", flexWrap: "wrap", gap: 8 }}>
         <div className="seg" role="tablist" aria-label="Filter by sector">
           <button className={sector === "all" ? "on" : ""} onClick={() => setSector("all")}>All</button>
           {SECTORS.map((s) => (
             <button key={s.id} className={sector === s.id ? "on" : ""} onClick={() => setSector(s.id)}>{lang === "ar" ? s.nameAr : (s.short || s.name)}</button>
           ))}
         </div>
-        <input className="input" style={{ maxWidth: 240 }} placeholder="Search tracks" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search tracks" />
+        <input className="input track-search" style={{ maxWidth: 240 }} placeholder={lang === "ar" ? "ابحث عن مسار" : "Search tracks"} value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search tracks" />
       </div>
       <div className="grid g3">
         {live.map((t, i) => <TrackCard key={t.id} t={t} index={i} onOpen={onOpen} />)}
