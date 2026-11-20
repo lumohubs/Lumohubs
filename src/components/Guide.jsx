@@ -117,12 +117,25 @@ function daysAgo(ts) {
   return Math.floor((Date.now() - ts) / 86400000);
 }
 
-function buildSystem(l) {
+// Words on the coach page. When Arabic is picked, the page and the coach switch to Arabic.
+const W = {
+  en: { hi: "Hi", profile: "My profile", signOut: "Sign out", you: "You", coach: "Lumo coach", typing: "Lumo coach is typing...",
+    askNext: "Ask next", send: "Send", placeholder: "Type a message to your coach", seeTracks: "See all tracks we offer", hideTracks: "Hide the track list",
+    earlier: "See your earlier messages", earlierNote: "Your past chats are saved. Scroll up in this box to read them.",
+    q1: ["Get my first job", "Switch careers", "Start a business", "Learn AI for my job"], q2: ["Which track fits me?", "What jobs pay well?"], q3: ["What do I do this week?", "Quiz me", "I'm stuck"] },
+  ar: { hi: "مرحبا", profile: "ملفي", signOut: "تسجيل الخروج", you: "أنت", coach: "مدرب لومو", typing: "مدرب لومو يكتب...",
+    askNext: "اسأل بعد ذلك", send: "إرسال", placeholder: "اكتب رسالة إلى مدربك", seeTracks: "اعرض كل المسارات", hideTracks: "إخفاء قائمة المسارات",
+    earlier: "اعرض رسائلك السابقة", earlierNote: "محادثاتك السابقة محفوظة. مرر للأعلى في هذا المربع لقراءتها.",
+    q1: ["أريد أول وظيفة لي", "أريد تغيير مهنتي", "أريد بدء مشروع", "تعلم الذكاء الاصطناعي لعملي"], q2: ["أي مسار يناسبني؟", "ما الوظائف ذات الأجر الجيد؟"], q3: ["ماذا أفعل هذا الأسبوع؟", "اختبرني", "أنا عالق"] },
+};
+
+function buildSystem(l, lang) {
   const t = l.trackId ? trackById(l.trackId) : null;
   const nw = t ? nextWeek(l.progress, t.id) : null;
   const doneCount = t ? ((l.progress || {})[t.id] || []).length : 0;
   const ago = daysAgo(l.lastSeenBefore);
   return [
+    lang === "ar" ? "The learner picked Arabic. Write every reply in clear, simple Arabic (Modern Standard Arabic). Keep track names, app names, and button names like Salesforce in English when needed." : "",
     "You are Lumo, the personal coach at Lumo Hubs, a training platform that teaches people job skills with AI and connects them to work.",
     "You are warm, upbeat, and direct. Use plain words a 5th grader can read. Keep replies under 120 words. When they send a photo of a problem like a leak, you may use up to 200 words: name the problem, give the first safety step, then give 2 or 3 short numbered fix steps. Short paragraphs. Ask only ONE question at a time. Do not use em dashes.",
     `Learner's first name: ${l.name}. Use it.`,
@@ -146,6 +159,7 @@ function buildSystem(l) {
     "Never make up jobs, pay, or promises. If you do not know, say so.",
     "If the learner sends a photo, look at it closely, say what you see in one line, then help with their question about it. If the photo is not clear, ask for a closer or brighter one.",
     "Follow up ideas: at the very end of EVERY reply, add 2 or 3 lines, each starting with NEXT: and then a short question the learner could ask you next (under 10 words, in their voice, like 'How do I price my first job?'). Make them go a little deeper or more advanced than your answer. The app shows these as buttons and hides the NEXT: lines.",
+    lang === "ar" ? "IMPORTANT: Reply in Arabic only. The NEXT: questions must be in Arabic too. Keep the words GOAL:, TRACK:, NEXT: and track ids in English." : "",
   ].filter(Boolean).join(" ");
 }
 
@@ -365,7 +379,8 @@ function LevelCheck({ l, t, onClose }) {
   );
 }
 
-export function Guide({ openTrack }) {
+export function Guide({ openTrack, lang = "en" }) {
+  const w = W[lang] || W.en;
   const { learner: l, ready, noStore } = useLearner();
   const [chat, setChat] = useState([]);
   const [input, setInput] = useState("");
@@ -411,7 +426,7 @@ export function Guide({ openTrack }) {
     if (hidden) msgs.push({ role: "user", content: hidden });
     // The chat must start with the learner speaking.
     if (msgs.length && msgs[0].role === "assistant") msgs.unshift({ role: "user", content: "Hi" });
-    const r = await askClaude({ system: buildSystem(l), messages: msgs, maxTokens: 1500 });
+    const r = await askClaude({ system: buildSystem(l, lang), messages: msgs, maxTokens: 1500 });
     setBusy(false);
     if (r.error) { setError(r.error); return null; }
     const p = parseReply(r.text);
@@ -476,9 +491,7 @@ export function Guide({ openTrack }) {
   const locked = waitMs > 0 ? Math.ceil(waitMs / 3600000) : 0;
   const lvWait = l.levelFailedAt ? l.levelFailedAt + RETRY_HOURS * 3600000 - Date.now() : 0;
   const lvLocked = lvWait > 0 ? Math.ceil(lvWait / 3600000) : 0;
-  const quick = !l.goal
-    ? ["Get my first job", "Switch careers", "Start a business", "Learn AI for my job"]
-    : !t ? ["Which track fits me?", "What jobs pay well?"] : ["What do I do this week?", "Quiz me", "I'm stuck"];
+  const quick = !l.goal ? w.q1 : !t ? w.q2 : w.q3;
   const offerOpen = showOffer === null ? false : showOffer;
 
   return (
@@ -487,14 +500,14 @@ export function Guide({ openTrack }) {
         <div className="row" style={{ gap: 10, alignItems: "center" }}>
           <Avatar l={l} />
           <div>
-            <h2 style={{ margin: 0 }}>Hi {l.name}</h2>
+            <h2 style={{ margin: 0 }}>{w.hi} {l.name}</h2>
             <div className="small muted">{t ? `${t.name}: ${((l.progress || {})[t.id] || []).length} of 6 weeks done` : "Let's find your track"}{l.goal ? ` · Goal: ${l.goal}` : ""}</div>
             <span className="chip teal" style={{ marginTop: 4 }}>Level {levelOf(l)}: {LEVELS[levelOf(l) - 1]}</span>
           </div>
         </div>
         <div className="row" style={{ gap: 8 }}>
-          <button className="btn ghost small" onClick={() => setEditing(!editing)} aria-expanded={editing}>My profile</button>
-          <button className="btn ghost small" onClick={() => { greetedThisVisit = false; setChat([]); signOut(); }}>Sign out</button>
+          <button className="btn ghost small" onClick={() => setEditing(!editing)} aria-expanded={editing}>{w.profile}</button>
+          <button className="btn ghost small" onClick={() => { greetedThisVisit = false; setChat([]); signOut(); }}>{w.signOut}</button>
         </div>
       </div>
 
@@ -544,15 +557,21 @@ export function Guide({ openTrack }) {
         </div>
       )}
 
+      {chat.length > 3 && (
+        <div className="row between" style={{ marginBottom: 6, gap: 8, flexWrap: "wrap" }}>
+          <span className="small muted">{w.earlierNote}</span>
+          <button type="button" className="btn ghost small" onClick={() => { const b = boxRef.current; if (b) b.scrollTo ? b.scrollTo({ top: 0, behavior: "smooth" }) : (b.scrollTop = 0); }}>{w.earlier}</button>
+        </div>
+      )}
       <div className="ai-box" ref={boxRef} style={{ position: "relative", maxHeight: 460, minHeight: 200, overflowY: "auto", whiteSpace: "normal" }} aria-live="polite">
         {chat.map((m, i) => (
           <div key={i} ref={i === chat.length - 1 ? lastRef : null} style={{ margin: "0 0 12px", textAlign: m.role === "user" ? "end" : "start" }}>
-            <div className="small muted">{m.role === "user" ? "You" : "Lumo coach"}</div>
+            <div className="small muted">{m.role === "user" ? w.you : w.coach}</div>
             {m.thumb && <img src={m.thumb} alt="Photo you sent" style={{ maxWidth: 160, maxHeight: 160, borderRadius: 8, display: "inline-block", marginBottom: 4 }} />}
             {m.role === "user" ? <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div> : <Markdown text={m.text} />}
           </div>
         ))}
-        {busy && <div className="muted small">Lumo coach is typing...</div>}
+        {busy && <div className="muted small">{w.typing}</div>}
       </div>
 
       {picks.length > 0 && (
@@ -563,7 +582,7 @@ export function Guide({ openTrack }) {
 
       {!busy && nexts.length > 0 && (
         <div style={{ marginTop: 10 }}>
-          <div className="small" style={{ fontWeight: 600, marginBottom: 4 }}>Ask next</div>
+          <div className="small" style={{ fontWeight: 600, marginBottom: 4 }}>{w.askNext}</div>
           <div className="row" style={{ flexWrap: "wrap", gap: 6 }}>
             {nexts.map((q) => <button key={q} className="btn ghost small" onClick={() => send(q)}>{q}</button>)}
             {t && nw && <button className="btn teal small" onClick={() => openTrack(t.id)}>Learn more in Week {nw}</button>}
@@ -585,7 +604,7 @@ export function Guide({ openTrack }) {
         </div>
       )}
 
-      <form className="row" style={{ marginTop: 10, alignItems: "flex-end" }} onSubmit={(e) => { e.preventDefault(); send(); }}>
+      <form className="chat-form" onSubmit={(e) => { e.preventDefault(); send(); }}>
         <label className="btn ghost" style={{ cursor: "pointer", padding: "10px 12px" }} title="Send a photo to your coach">
           <Icon name="Camera" size={18} label="Add a photo" />
           <input type="file" accept="image/*" hidden onChange={pickPhoto} disabled={busy} />
@@ -593,7 +612,7 @@ export function Guide({ openTrack }) {
         <textarea
           className="input"
           rows={2}
-          style={{ flex: 1, minWidth: 0, width: "auto", minHeight: 48, maxHeight: 160, resize: "vertical" }}
+          style={{ width: "auto", minHeight: 48, maxHeight: 160, resize: "vertical" }}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
@@ -601,10 +620,12 @@ export function Guide({ openTrack }) {
             if (e.key === "Enter" && !e.shiftKey && !isTouch() && !e.nativeEvent.isComposing) { e.preventDefault(); send(); }
           }}
           enterKeyHint="enter"
-          placeholder="Type a message to your coach"
+          placeholder={w.placeholder}
           aria-label="Message to your coach"
         />
-        <button className="btn" disabled={busy || (!input.trim() && !photo)}><Icon name="Rocket" size={16} /> Send</button>
+        <div className="send-row">
+          <button className="btn" disabled={busy || (!input.trim() && !photo)}><Icon name="Rocket" size={16} /> {w.send}</button>
+        </div>
       </form>
 
       <button
@@ -617,7 +638,7 @@ export function Guide({ openTrack }) {
           if (opening) setTimeout(() => { try { offerRef.current && offerRef.current.scrollIntoView({ behavior: "smooth", block: "start" }); } catch {} }, 50);
         }}
       >
-        {offerOpen ? "Hide the track list" : "See all tracks we offer"}
+        {offerOpen ? w.hideTracks : w.seeTracks}
       </button>
       {offerOpen && (
         <div ref={offerRef}>
