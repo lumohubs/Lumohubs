@@ -172,7 +172,11 @@ export default function App() {
       <Icon name={icon} /><span>{t[k]}</span>
     </button>
   );
-  const moreItems = NAV.flatMap((g) => g.items).filter(([k]) => !LEARNER_NAV.some(([x]) => x === k));
+  // "Run the hub" pages are for staff only. Staff open the app with #staff at the end of the link,
+  // or they already typed the staff code on the Instructor page.
+  const isStaff = (() => { try { return window.location.hash === "#staff" || !!sessionStorage.getItem("lh-staff-code"); } catch { return false; } })();
+  const shownNav = NAV.filter((g) => g.group !== "run" || isStaff);
+  const moreItems = shownNav.flatMap((g) => g.items).filter(([k]) => !LEARNER_NAV.some(([x]) => x === k));
   const moreBtn = (
     <button className="nav-btn" onClick={() => setShowMore(!showMore)} aria-expanded={showMore}>
       <Icon name="Compass" /><span>{showMore ? "Less" : "More"}</span>
@@ -182,7 +186,7 @@ export default function App() {
     <div>
       {LEARNER_NAV.map(navBtn)}
       {moreBtn}
-      {showMore && NAV.map((g) => {
+      {showMore && shownNav.map((g) => {
         const items = g.items.filter(([k]) => moreItems.some(([x]) => x === k));
         return items.length ? <div key={g.group}><div className="nav-group">{t[g.group]}</div>{items.map(navBtn)}</div> : null;
       })}
